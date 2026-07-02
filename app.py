@@ -1,77 +1,151 @@
+import streamlit as st
+from openai import OpenAI
+import base64
+
+# ---------------- إعداد الصفحة ----------------
+st.set_page_config(
+    page_title="نبراس",
+    page_icon="💬",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
+# ---------------- قراءة المفتاح ----------------
+API_KEY = st.secrets.get("OPENAI_API_KEY")
+if not API_KEY:
+    st.error("⚠️ المفتاح غير مضاف في إعدادات Streamlit")
+    st.stop()
+
+client = OpenAI(api_key=API_KEY)
+# ---------------- تصميم الواجهة ----------------
 st.markdown("""
 <style>
+#MainMenu {visibility:hidden;}
+footer {visibility:hidden;}
+header {visibility:hidden;}
 
-/* إخفاء عناصر Streamlit */
-#MainMenu {visibility: hidden;}
-footer {visibility: hidden;}
-header {visibility: hidden;}
-
-/* الخلفية */
-.stApp {
-    background: #ffffff;
+.stApp{
+    background:#ffffff;
 }
 
-/* الشريط العلوي */
-.topbar {
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    padding:10px 5px;
-    margin-bottom:15px;
-}
-
-.left-icons, .right-icons {
-    display:flex;
-    gap:10px;
-}
-
-.icon-btn {
-    background:#f3f4f6;
-    border-radius:12px;
-    padding:8px 12px;
-    font-size:18px;
-    border:1px solid #e5e7eb;
-}
-
-/* عنوان نبراس */
-.title {
+.title{
     text-align:center;
-    font-size:34px;
+    font-size:38px;
     font-weight:bold;
+    margin-top:15px;
     color:#111827;
-    margin-top:10px;
+}
+
+.sub{
+    text-align:center;
+    color:#6b7280;
     margin-bottom:25px;
 }
 
-/* رسائل المحادثة */
-.chat-card {
+.msg{
     background:#f8fafc;
     border:1px solid #e5e7eb;
     border-radius:18px;
     padding:15px;
     margin-bottom:12px;
 }
-
-.user-card {
-    border-right:4px solid #2563eb;
-}
-
-.ai-card {
-    border-right:4px solid #10b981;
-}
-
-/* صندوق الإدخال */
-.chat-input-box {
-    position:fixed;
-    bottom:20px;
-    left:50%;
-    transform:translateX(-50%);
-    width:80%;
-    background:white;
-    border:1px solid #d1d5db;
-    border-radius:28px;
-    padding:12px;
-    box-shadow:0 2px 12px rgba(0,0,0,0.08);
-}
 </style>
 """, unsafe_allow_html=True)
+
+st.markdown('<div class="title">نبراس</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub">تحدث مع نبراس</div>', unsafe_allow_html=True)
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+with st.sidebar:
+    st.title("☰ نبراس")
+    if st.button("✏️ محادثة جديدة"):
+        st.session_state.messages = []
+        st.rerun()
+
+for m in st.session_state.messages:
+    with st.chat_message(m["role"]):
+        st.markdown(m["content"])
+
+audio = st.audio_input("🎤")
+
+voice_text = ""
+if audio:
+    try:
+        result = client.audio.transcriptions.create(
+            model="whisper-1",
+            file=audio,
+            language="ar"
+        )
+        voice_text = result.text
+    except:
+        st.error("تعذر تحويل الصوت.")
+
+prompt = st.chat_input("تحدث مع نبراس")
+
+if voice_text:
+    prompt = voice_text
+
+if prompt:
+    st.session_state.messages.append(
+        {"role": "user", "content": prompt}
+    )
+
+    messages = [
+        {
+            "role": "system",
+            "content": """
+أنت مساعد ذكي اسمك نبراس.
+
+تساعد المستخدمين في:
+- البر والكشتات.
+- الحلال والمواشي.
+- الصيد والطيور المهاجرة.
+- الأسئلة العامة.
+
+أجب باختصار.
+لا تكتب ردوداً طويلة إلا إذا طلب المستخدم التفصيل.
+كن مؤدباً دائماً.
+إذا سئلت عن اسمك فقل: اسمي نبراس.
+"""
+        }
+    ]
+
+    messages.extend(st.session_state.messages)
+
+    response = client.chat.completions.create(
+        model="gpt-4.1-mini",
+        messages=messages,
+        max_completion_tokens=180
+    )
+
+    answer = response.choices[0].message.content
+
+    st.session_state.messages.append(
+        {"role": "assistant", "content": answer}
+    )
+
+    st.rerun()
+
+if st.session_state.messages:
+    last = st.session_state.messages[-1]
+
+    if last["role"] == "assistant":
+        try:
+            speech = client.audio.speech.create(
+                model="tts-1",
+                voice="alloy",
+                input=last["content"],
+                response_format="mp3"
+            )
+
+            audio_b64 = base64.b64encode(
+                speech.content
+            ).decode()
+
+            st.audio(
+                f"data:audio/mp3;base64,{audio_b64}"
+            )
+        except:
+            pass
