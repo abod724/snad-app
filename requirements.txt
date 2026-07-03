@@ -1,5 +1,2 @@
 streamlit
 openai
-python-dotenv
-gTTS
-streamlit-chat
