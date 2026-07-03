@@ -1,6 +1,12 @@
 import streamlit as st
 from openai import OpenAI
+import streamlit as st
+from openai import OpenAI
+from dotenv import load_dotenv
+import os
 
+load_dotenv()
+API_KEY = os.getenv("OPENAI_API_KEY")
 # إعدادات ثابتة
 st.set_page_config(page_title="نبراس", page_icon="💬", layout="centered", initial_sidebar_state="collapsed")
 
