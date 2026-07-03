@@ -3,6 +3,8 @@ from openai import OpenAI
 import base64
 from datetime import datetime
 
+RELOAD = str(__import__("time").time())
+
 # -------------------------- إعدادات الصفحة --------------------------
 st.set_page_config(
     page_title="نبراس",
