@@ -33,8 +33,6 @@ st.markdown("""
     color: #e5e7eb;
 }
 #MainMenu, footer, header {visibility: hidden;}
-
-/* شريط الأعلى الفاخر */
 .top-bar {
     position: fixed;
     top: 0;
@@ -73,8 +71,6 @@ st.markdown("""
 .top-right {
     text-align: left;
 }
-
-/* منطقة المحادثة الفاخرة */
 .chat-area {
     max-width: 950px;
     margin: 90px auto 140px;
@@ -116,8 +112,6 @@ st.markdown("""
 .bot::before {
     border-color: rgba(250,204,21,0.6);
 }
-
-/* مربع الكتابة الفاخر */
 .input-box {
     position: fixed;
     bottom: 25px;
@@ -171,8 +165,6 @@ st.markdown("""
     background: radial-gradient(circle at top, #facc15 0%, #f97316 60%);
     color: #0b1120;
 }
-
-/* عناصر داخل popover */
 .stPopover {
     background: #020617 !important;
     border-radius: 18px !important;
@@ -229,7 +221,7 @@ for msg in st.session_state.chat_history:
         st.markdown(f'<div class="msg bot">{msg["content"]}</div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# -------------------------- مربع الكتابة مع منع التكرار --------------------------
+# -------------------------- مربع الكتابة --------------------------
 st.markdown('<div class="input-box">', unsafe_allow_html=True)
 voice_input = st.audio_input("🎤", label_visibility="collapsed")
 
@@ -289,14 +281,17 @@ if send and user_input.strip():
 - كن متعاونًا وودودًا، لكن بدون مبالغة في المجاملات.
 """
 
-            response = client.chat.completions.create(
-                model="gpt-3.5-turbo-1106",
-                messages=[{"role": "system", "content": system_prompt}] + st.session_state.chat_history,
-                temperature=0.6,
-                max_tokens=700,
-                top_p=0.9
+            # 🔥 التعديل الجديد هنا — استبدال النموذج القديم
+            response = client.responses.create(
+                model="gpt-4.1-mini",
+                input=[
+                    {"role": "system", "content": system_prompt},
+                    *st.session_state.chat_history
+                ]
             )
-            answer = response.choices[0].message.content
+
+            answer = response.output_text
+
             st.session_state.chat_history.append({"role": "assistant", "content": answer})
 
             if "all_chats" not in st.session_state:
