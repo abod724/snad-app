@@ -1,6 +1,7 @@
-streamlit>=1.35.0
-openai>=1.10.0
-serpapi-python
-pytz
-python-dotenv
 
+streamlit
+openai
+python-dotenv
+gtts
+streamlit-chat
+google-search-results
