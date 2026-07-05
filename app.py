@@ -34,7 +34,7 @@ def search_google(query):
     if "organic_results" in results:
         return results["organic_results"][0].get("snippet", "لا يوجد وصف")
     return "لم أجد نتائج."
-# -------------------------- تصميم واجهة فاخرة (أسود + ذهبي + أزرق) --------------------------
+# -------------------------- تصميم واجهة فاخرة ( ابيض+ازرق فاتح) --------------------------
 st.markdown("""
 <style>
 * {
