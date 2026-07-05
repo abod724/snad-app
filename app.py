@@ -255,21 +255,9 @@ for msg in st.session_state.chat_history:
 st.markdown('</div>', unsafe_allow_html=True)
 
 # -------------------------- مربع الكتابة --------------------------
-st.markdown('<div class="input-box">', unsafe_allow_html=True)
-voice_input = st.audio_input("🎤", label_visibility="collapsed")
-
-if "temp_input" not in st.session_state:
-    st.session_state.temp_input = ""
-
-user_input = st.text_input(
-    "",
-    placeholder="اكتب سؤالك هنا أو تحدث بصوتك...",
-    label_visibility="collapsed",
-    value=st.session_state.temp_input,
-    key="user_input_field"
-)
-send = st.button("📤", type="primary", key="send_button")
-st.markdown('</div>', unsafe_allow_html=True)
+voice_input = st.audio_input("سجل صوتك هنا", label_visibility="collapsed")
+# ✅ مدخل المحادثة الصحيح والآمن لـ نبراس
+user_input = st.chat_input("اكتب سؤالك هنا...")
 
 # -------------------------- معالجة الإدخال الصوتي --------------------------
 if voice_input:
@@ -286,7 +274,7 @@ if voice_input:
             st.error(f"❌ خطأ في تحويل الصوت: {str(e)}")
 
 # -------------------------- إرسال السؤال وجلب رد احترافي --------------------------
-if send and user_input.strip():
+if user_input and user_input.strip():
     st.session_state.chat_history.append({"role": "user", "content": user_input.strip()})
 
     with st.spinner("نبراس يجهز لك ردًا فاخرًا وواضحًا..."):
