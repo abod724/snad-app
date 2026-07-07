@@ -19,23 +19,26 @@ API_KEY = st.secrets.get("OPENAI_API_KEY")
 SERPAPI_API_KEY = st.secrets.get("SERPAPI_API_KEY")
 
 if not API_KEY:
-    st.error("⚠️ المفتاح غير مضاف")
+    st.error("⚠️ API key not found")
     st.stop()
 
 client = OpenAI(api_key=API_KEY)
 
-# -------------------------- الذاكرة --------------------------
+# -------------------------- الذاكرة (Memory) --------------------------
 MEMORY_FILE = "memory.json"
 
 def load_memory():
     if os.path.exists(MEMORY_FILE):
-        with open(MEMORY_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
+        try:
+            with open(MEMORY_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            return {}
     return {}
 
-def save_memory(data):
+def save_memory(memory):
     with open(MEMORY_FILE, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+        json.dump(memory, f, ensure_ascii=False, indent=2)
 
 if "memory" not in st.session_state:
     st.session_state.memory = load_memory()
@@ -60,23 +63,25 @@ def search_google(query):
             "engine": "google",
             "q": query,
             "api_key": SERPAPI_API_KEY,
-            "num": 2  # قللنا لـ 2 عشان أسرع وأقل استهلاك
+            "num": 3
         }
         search = GoogleSearch(params)
         results = search.get_dict()
         
         snippets = []
         if "organic_results" in results:
-            for result in results["organic_results"][:2]:
+            for result in results["organic_results"][:3]:
                 snippet = result.get("snippet", "")
                 if snippet:
                     snippets.append(snippet)
         
-        return "\n".join(snippets) if snippets else ""
+        if snippets:
+            return "\n".join(snippets)
+        return ""
     except:
         return ""
 
-# -------------------------- واجهة (بدون خلفيات وأيقونات) --------------------------
+# -------------------------- CSS --------------------------
 st.markdown("""
 <style>
 * {
@@ -112,24 +117,24 @@ st.markdown("""
 }
 
 .msg {
-    padding: 6px 0;
-    margin: 4px 0;
-    max-width: 100%;
-    line-height: 1.8;
+    padding: 12px 16px;
+    margin: 6px 0;
+    border-radius: 16px;
+    max-width: 80%;
+    line-height: 1.6;
     font-size: 15px;
 }
 .user {
-    color: #1a1a1a;
-    font-weight: 600;
+    background: #1a1a1a;
+    color: #ffffff;
     margin-left: auto;
-    text-align: left;
+    border-bottom-right-radius: 4px;
 }
 .bot {
+    background: #f3f4f6;
     color: #1a1a1a;
     margin-right: auto;
-    background: transparent !important;
-    padding: 4px 0 !important;
-    border-radius: 0 !important;
+    border-bottom-left-radius: 4px;
 }
 
 div[data-testid="stChatInput"] {
@@ -182,18 +187,6 @@ div[data-testid="stPopover"] button:hover {
 
 .stProgress > div > div {
     background: linear-gradient(135deg, #667eea, #764ba2) !important;
-}
-
-.typing-indicator {
-    display: inline-block;
-    font-size: 18px;
-    color: #667eea;
-    animation: blink 1s infinite;
-}
-@keyframes blink {
-    0% { opacity: 0.2; }
-    50% { opacity: 1; }
-    100% { opacity: 0.2; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -253,13 +246,11 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 # -------------------------- عرض المحادثة --------------------------
 st.markdown('<div class="chat-area">', unsafe_allow_html=True)
-
 for msg in st.session_state.chat_history:
     if msg["role"] == "user":
         st.markdown(f'<div class="msg user">{msg["content"]}</div>', unsafe_allow_html=True)
     else:
         st.markdown(f'<div class="msg bot">{msg["content"]}</div>', unsafe_allow_html=True)
-
 st.markdown('</div>', unsafe_allow_html=True)
 
 # -------------------------- مربع الكتابة --------------------------
@@ -276,84 +267,64 @@ if user_input:
     
     if query:
         st.session_state.chat_history.append({"role": "user", "content": query})
+        
         st.session_state.memory[user_id] = st.session_state.chat_history
         save_memory(st.session_state.memory)
 
-        st.markdown(f'<div class="msg user">{query}</div>', unsafe_allow_html=True)
+        with st.spinner("⏳ جاري التفكير..."):
+            try:
+                search_results = search_google(query)
+                
+                system_prompt = f"""
+أنت «نبراس» – مساعد ذكي، سريع، وأسلوبك بسيط وواضح.
+تتحدث بالعربية الفصحى.
 
-        typing_placeholder = st.empty()
-        typing_placeholder.markdown(
-            '<div class="msg bot" style="color: #667eea; font-size: 18px;"><span class="typing-indicator">•••</span></div>',
-            unsafe_allow_html=True
-        )
-
-        try:
-            search_results = search_google(query)
-            
-            # ✅ تعليمات مختصرة ودقيقة (تقلل الاستهلاك)
-            system_prompt = f"""
-أنت «نبراس» – مساعد ذكي، مختصر، ودقيق.
-
-🎯 تعليمات مهمة جداً:
-- **اختصر قدر الإمكان** (جمل قصيرة، نقاط مختصرة)
-- **لا تزيد عن 50 كلمة** في الرد الواحد
-- **اذكر المعلومة الأساسية فقط** بدون مقدمات
-- استخدم نقاط مرقمة إذا كان السؤال يحتاج شرح (حد أقصى 3 نقاط)
-- لا تكرر المعلومة
-- إذا السؤال غامض، اسأل توضيح بجملة وحدة
+🎯 دورك:
+- الإجابة عن الأسئلة العامة، التقنية، اليومية.
+- استخدم نقاطاً مختصرة.
+- اجعل الإجابة مباشرة.
 
 📌 معلومات من البحث:
 {search_results if search_results else "لا توجد معلومات بحث محدثة."}
 """
 
-            stream = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    *st.session_state.chat_history
-                ],
-                max_tokens=250,  # قللنا لـ 250 عشان أقل استهلاك
-                temperature=0.3,  # أقل إبداع = ردود أكثر دقة
-                stream=True
-            )
-
-            typing_placeholder.empty()
-            response_placeholder = st.empty()
-            full_response = ""
-
-            for chunk in stream:
-                if chunk.choices[0].delta.content is not None:
-                    full_response += chunk.choices[0].delta.content
-                    response_placeholder.markdown(
-                        f'<div class="msg bot">{full_response}</div>',
-                        unsafe_allow_html=True
-                    )
-
-            st.session_state.chat_history.append({"role": "assistant", "content": full_response})
-            st.session_state.memory[user_id] = st.session_state.chat_history
-            save_memory(st.session_state.memory)
-
-            if "all_chats" not in st.session_state:
-                st.session_state.all_chats = []
-            st.session_state.all_chats.append({
-                "date": datetime.now().strftime("%H:%M - %d/%m"),
-                "messages": st.session_state.chat_history.copy()
-            })
-
-            try:
-                speech = client.audio.speech.create(
-                    model="tts-1",
-                    voice="alloy",
-                    input=full_response,
-                    response_format="mp3"
+                response = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        *st.session_state.chat_history
+                    ],
+                    max_tokens=500,
+                    temperature=0.7
                 )
-                audio_b64 = base64.b64encode(speech.content).decode("utf-8")
-                st.audio(f"data:audio/mp3;base64,{audio_b64}", format="audio/mp3")
-            except:
-                pass
 
-            st.rerun()
+                answer = response.choices[0].message.content
 
-        except Exception as e:
-            typing_placeholder.empty()
-            st.error(f"❌ خطأ: {str(e)}")
+                st.session_state.chat_history.append({"role": "assistant", "content": answer})
+                
+                st.session_state.memory[user_id] = st.session_state.chat_history
+                save_memory(st.session_state.memory)
+
+                if "all_chats" not in st.session_state:
+                    st.session_state.all_chats = []
+                st.session_state.all_chats.append({
+                    "date": datetime.now().strftime("%H:%M - %d/%m"),
+                    "messages": st.session_state.chat_history.copy()
+                })
+
+                try:
+                    speech = client.audio.speech.create(
+                        model="tts-1",
+                        voice="alloy",
+                        input=answer,
+                        response_format="mp3"
+                    )
+                    audio_b64 = base64.b64encode(speech.content).decode("utf-8")
+                    st.audio(f"data:audio/mp3;base64,{audio_b64}", format="audio/mp3")
+                except:
+                    pass
+
+                st.rerun()
+
+            except Exception as e:
+                st.error(f"❌ خطأ: {str(e)}")
