@@ -20,7 +20,7 @@ if not API_KEY:
 
 client = OpenAI(api_key=API_KEY)
 
-# -------------------------- CSS (واجهة بيضاء وسوداء) --------------------------
+# -------------------------- CSS --------------------------
 st.markdown("""
 <style>
 * {
@@ -146,35 +146,31 @@ if user_input:
 
         with st.spinner("🔍 جاري البحث والتفكير..."):
             try:
-                # تعليمات نبراس بأسلوب طبيعي
+                # تعليمات صارمة لتجاهل المعرفة القديمة
                 system_prompt = """
-أنت «نبراس» – مساعد ذكي، سريع، وأسلوبك بسيط وواضح، مثل محادثة طبيعية بين شخصين.
-
-🎯 أسلوبك:
-- اكتب وكأنك تتحدث مع صديق، بلغة عربية سليمة ولكن غير رسمية.
-- لا تذكر أبداً أنك استخدمت "بحث" أو "مصادر" أو "معلومات محدثة".
-- إذا كنت تعرف المعلومة، اكتبها مباشرة بدون مقدمات.
-- استخدم نقاطاً مختصرة فقط عند الحاجة.
-- كن دقيقاً ومباشراً، وأعطي المعلومة الرئيسية أولاً.
-
-📌 تذكر: أنت مجرد مساعد ذكي، لست موقع أخبار، ولا تذكر المصادر أبداً.
+🔥 **تعليمات صارمة**:
+- أنت متصل بالبحث في الإنترنت.
+- **تجاهل تماماً** أي معرفة لديك قبل سنة 2025.
+- **استخدم فقط** نتائج البحث في إجابتك.
+- إذا لم تجد نتيجة، قل: «ليس لدي معلومات محدثة عن هذا الموضوع».
+- لا تذكر أبداً كلمات: "بحث" أو "مصادر" أو "معلومات محدثة".
+- اكتب بأسلوب طبيعي، وكأنك تتحدث مع صديق.
 """
 
-                # استخدام Responses API مع أداة web_search المدمجة
-                response = client.responses.create(
+                # استخدام Chat Completions مع أداة web_search
+                response = client.chat.completions.create(
                     model="gpt-4o-mini",
-                    tools=[{"type": "web_search"}],
-                    input=[
+                    messages=[
                         {"role": "system", "content": system_prompt},
                         *st.session_state.chat_history
                     ],
-                    max_output_tokens=500,
+                    tools=[{"type": "web_search"}],
+                    max_tokens=600,
                     temperature=0.7
                 )
 
-                answer = response.output_text
+                answer = response.choices[0].message.content
 
-                # لا نضيف أي شيء للرد
                 st.session_state.chat_history.append({"role": "assistant", "content": answer})
 
                 # حفظ المحادثة
