@@ -168,7 +168,7 @@ st.markdown("""
     font-size: 17px;
     padding: 10px;
     background: #ffffff;
-    color: #000000;
+    color: #555555;
     font-weight: 700;
     border-radius: 30px;
 }
