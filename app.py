@@ -2,6 +2,7 @@ import streamlit as st
 from openai import OpenAI
 import base64
 from datetime import datetime
+from serpapi import GoogleSearch
 
 # -------------------------- إعدادات الصفحة --------------------------
 st.set_page_config(
@@ -11,18 +12,49 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# -------------------------- المفتاح --------------------------
+# -------------------------- المفاتيح --------------------------
 API_KEY = st.secrets.get("OPENAI_API_KEY")
+SERPAPI_API_KEY = st.secrets.get("SERPAPI_API_KEY")
 
 if not API_KEY:
     st.error("⚠️ المفتاح غير مضاف في إعدادات Streamlit")
     st.stop()
 
+if not SERPAPI_API_KEY:
+    st.error("⚠️ مفتاح SerpAPI غير مضاف في إعدادات Streamlit")
+    st.stop()
+
 client = OpenAI(api_key=API_KEY)
 
-# -------------------------- CSS (تصميم جديد) --------------------------
+# -------------------------- دالة البحث --------------------------
+def search_google(query):
+    try:
+        params = {
+            "engine": "google",
+            "q": query,
+            "api_key": SERPAPI_API_KEY,
+            "num": 5
+        }
+        search = GoogleSearch(params)
+        results = search.get_dict()
+        
+        snippets = []
+        if "organic_results" in results:
+            for result in results["organic_results"][:5]:
+                snippet = result.get("snippet", "")
+                if snippet:
+                    snippets.append(snippet)
+        
+        if snippets:
+            return "\n".join(snippets)
+        return "لم أجد نتائج بحث محددة."
+    except Exception as e:
+        return f"حدث خطأ في البحث: {str(e)}"
+
+# -------------------------- واجهة بيضاء وسوداء (أنيقة) --------------------------
 st.markdown("""
 <style>
+/* تنسيق عام */
 * {
     direction: rtl;
     text-align: right;
@@ -34,44 +66,40 @@ st.markdown("""
 }
 #MainMenu, footer, header {visibility: hidden;}
 
-/* الشريط العلوي - بدون خلفية سوداء */
+/* ===== الشريط العلوي ===== */
 .top-bar {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     background: #ffffff;
-    padding: 12px 25px;
+    padding: 10px 20px;  /* تقليل المسافة */
     border-bottom: 1px solid #e5e7eb;
     display: flex;
     justify-content: space-between;
     align-items: center;
     z-index: 1000;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
-/* تنسيق اسم نبراس مع القلب */
+/* القلم في اليسار مع العنوان */
 .top-left {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 8px; /* مسافة صغيرة بين القلم والعنوان */
 }
-.top-left .heart {
-    font-size: 28px;
-    color: #dc2626;
-    margin-left: 4px;
+.top-left .pen-icon {
+    font-size: 22px;
+    background: #f0f4ff;
+    padding: 6px;
+    border-radius: 10px;
+    color: #1a1a1a;
 }
-.top-left .app-name {
-    font-size: 24px;
+.top-left .app-title {
+    font-size: 22px;
     font-weight: 700;
     color: #1a1a1a;
     margin: 0;
-    letter-spacing: -0.5px;
-}
-.top-left .app-sub {
-    font-size: 13px;
-    color: #6b7280;
-    margin-right: 12px;
 }
 
 .top-center p {
@@ -80,15 +108,17 @@ st.markdown("""
     color: #6b7280;
 }
 
+/* ===== منطقة المحادثة ===== */
 .chat-area {
     max-width: 850px;
-    margin: 80px auto 100px;
-    padding: 8px 5px 20px;
+    margin: 70px auto 100px;  /* تقليل المسافات */
+    padding: 8px 5px 20px;   /* تقليل المسافات */
 }
 
+/* ===== تنسيق الرسائل ===== */
 .msg {
-    padding: 12px 16px;
-    margin: 6px 0;
+    padding: 12px 16px;      /* تقليل المسافات */
+    margin: 6px 0;           /* تقليل المسافات */
     border-radius: 16px;
     max-width: 80%;
     line-height: 1.6;
@@ -107,30 +137,70 @@ st.markdown("""
     border-bottom-left-radius: 4px;
 }
 
+/* ===== مربع الكتابة (مختصر وأنيق) ===== */
 div[data-testid="stChatInput"] {
     background: #ffffff !important;
     border: 1px solid #e5e7eb !important;
     border-radius: 12px !important;
-    padding: 2px 12px !important;
+    padding: 2px 12px !important;  /* تقليل المسافات */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+    margin-bottom: 10px !important;
 }
+
 div[data-testid="stChatInput"] input {
     color: #1a1a1a !important;
     font-weight: 500 !important;
     background: #ffffff !important;
+    border-radius: 8px !important;
+    padding: 8px 12px !important;  /* تقليل المسافات */
+    font-size: 15px !important;
+}
+
+div[data-testid="stChatInput"] input::placeholder {
+    color: #9ca3af !important;
+}
+
+div[data-testid="stChatInput"] button {
+    background: #1a1a1a !important;
+    color: #ffffff !important;
+    border-radius: 50% !important;
+    padding: 6px !important;  /* تقليل المسافات */
+}
+
+/* ===== القائمة المنسدلة (بدون شرطتين) ===== */
+div[data-testid="stPopover"] {
+    border-radius: 12px !important;
+    border: 1px solid #e5e7eb !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+    padding: 8px !important;
+}
+
+div[data-testid="stPopover"] button {
+    border-bottom: none !important;  /* إزالة الشرطتين */
+    padding: 8px 12px !important;
+    border-radius: 8px !important;
+    margin: 2px 0 !important;
+    font-size: 14px !important;
+}
+
+div[data-testid="stPopover"] button:hover {
+    background: #f3f4f6 !important;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# -------------------------- الشريط العلوي الجديد --------------------------
+# -------------------------- الشريط العلوي --------------------------
 st.markdown('<div class="top-bar">', unsafe_allow_html=True)
-col_left, col_center, col_right = st.columns([1.5, 2, 1.2])
+
+# العمود الأيسر: القلم + العنوان
+col_left, col_center, col_right = st.columns([1.2, 2, 1.2])
 
 with col_left:
+    # القلم في اليسار مع العنوان
     st.markdown("""
     <div class="top-left">
-        <span class="heart">❤️</span>
-        <span class="app-name">نبراس</span>
-        <span class="app-sub">Nibras</span>
+        <span class="pen-icon">✏️</span>
+        <span class="app-title">جديد نبراس</span>
     </div>
     """, unsafe_allow_html=True)
 
@@ -150,6 +220,7 @@ with col_right:
             st.session_state.all_chats = []
         if st.session_state.all_chats:
             for i, c in enumerate(st.session_state.all_chats):
+                # إزالة الشرطتين من الأزرار (تمت عبر CSS)
                 if st.button(f"محادثة {i+1} - {c['date']}", use_container_width=True):
                     st.session_state.chat_history = c["messages"]
                     st.rerun()
@@ -162,6 +233,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = [{"role": "assistant", "content": "مرحبًا، أنا نبراس… كيف أقدر أساعدك اليوم؟"}]
 
+# عرض المحادثة
 st.markdown('<div class="chat-area">', unsafe_allow_html=True)
 for msg in st.session_state.chat_history:
     if msg["role"] == "user":
@@ -185,30 +257,38 @@ if user_input:
     if query:
         st.session_state.chat_history.append({"role": "user", "content": query})
 
-        with st.spinner("🔍 جاري البحث والتفكير..."):
+        with st.spinner("نبراس يبحث..."):
             try:
-                system_prompt = """
-أنت «نبراس» – مساعد ذكي، سريع، وأسلوبك بسيط وواضح.
+                search_results = search_google(query)
 
-🎯 أسلوبك:
-- اكتب وكأنك تتحدث مع صديق، بلغة عربية سليمة.
-- استخدم معلومات البحث المقدمة لك.
-- لا تذكر أبداً أنك استخدمت "بحث" أو "مصادر".
-- كن دقيقاً ومباشراً.
+                system_prompt = f"""
+أنت «نبراس» – مساعد ذكي، أسلوبك بسيط وواضح.
+تتحدث بالعربية الفصحى أو بلهجة سعودية خفيفة.
+
+🎯 دورك:
+- الإجابة عن الأسئلة العامة، التقنية، اليومية، التعليمية.
+- قدّم أمثلة عملية عند الحاجة.
+- نظّم الإجابات في نقاط إذا كان السؤال يتطلب شرحاً.
+
+⚖️ قواعد:
+- لا تخترع معلومات، وإذا لم تكن متأكداً قل: «المعلومة غير مؤكدة».
+- تجنب الإطالة غير الضرورية.
+- إذا كان السؤال غامضاً، اطلب توضيحاً.
+- إذا سألك عن اسمك: «أنا نبراس، مساعدك الذكي».
+
+📌 معلومات محدثة من البحث:
+{search_results}
 """
 
-                response = client.responses.create(
+                response = client.chat.completions.create(
                     model="gpt-4o-mini",
-                    tools=[{"type": "web_search"}],
-                    input=[
+                    messages=[
                         {"role": "system", "content": system_prompt},
                         *st.session_state.chat_history
-                    ],
-                    max_output_tokens=600,
-                    temperature=0.7
+                    ]
                 )
 
-                answer = response.output_text
+                answer = response.choices[0].message.content
 
                 st.session_state.chat_history.append({"role": "assistant", "content": answer})
 
@@ -223,13 +303,13 @@ if user_input:
                     speech = client.audio.speech.create(
                         model="tts-1",
                         voice="alloy",
-                        input=answer[:500],
+                        input=answer,
                         response_format="mp3"
                     )
                     audio_b64 = base64.b64encode(speech.content).decode("utf-8")
                     st.audio(f"data:audio/mp3;base64,{audio_b64}", format="audio/mp3")
-                except Exception:
-                    pass
+                except Exception as e:
+                    st.warning(f"⚠️ خطأ في الصوت: {str(e)}")
 
                 st.rerun()
 
