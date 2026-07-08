@@ -18,8 +18,7 @@ API_KEY = st.secrets.get("OPENAI_API_KEY")
 response = client.responses.create)
  model="gpt-4o-mini"
  input="ابحث في الويب عن اخر التحديثات"
- tools[{"type":"web_search"}]
-
+tools[{"type":"web_search"}]
 print(response.output_text)
 if not API_KEY:
     st.error("⚠️ المفتاح غير مضاف في إعدادات Streamlit")
