@@ -2,6 +2,7 @@ import streamlit as st
 from openai import OpenAI
 import base64
 from datetime import datetime
+import re
 
 # -------------------------- إعدادات الصفحة --------------------------
 st.set_page_config(
@@ -10,6 +11,13 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed"
 )
+
+# -------------------------- ذاكرة المستخدم --------------------------
+if "user_name" not in st.session_state:
+    st.session_state.user_name = None
+
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = [{"role": "assistant", "content": "مرحبًا، أنا نبراس… ما هو اسمك؟"}]
 
 # -------------------------- المفتاح --------------------------
 API_KEY = st.secrets.get("OPENAI_API_KEY")
@@ -105,13 +113,10 @@ col_left, col_center, _ = st.columns([1.5, 2, 1.2])
 with col_left:
     st.markdown('<div class="top-left"><span class="heart">❤️</span><span class="app-name">نبراس</span></div>', unsafe_allow_html=True)
 with col_center:
-    st.markdown('<div class="top-center"><p>مساعدك الذكي – بسيط، سريع، واضح</p></div>', unsafe_allow_html=True)
+    st.markdown('<div class="top-center"><p>مساعدك الذكي – صديقك المخلص</p></div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
 # -------------------------- سجل المحادثة --------------------------
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = [{"role": "assistant", "content": "مرحبًا، أنا نبراس… كيف أقدر أساعدك اليوم؟"}]
-
 st.markdown('<div class="chat-area">', unsafe_allow_html=True)
 for msg in st.session_state.chat_history:
     if msg["role"] == "user":
@@ -119,6 +124,16 @@ for msg in st.session_state.chat_history:
     else:
         st.markdown(f'<div class="msg bot">{msg["content"]}</div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
+
+# -------------------------- طلب اسم المستخدم إذا ما عرفه --------------------------
+if st.session_state.user_name is None:
+    if st.session_state.chat_history and st.session_state.chat_history[-1]["role"] == "user":
+        last_msg = st.session_state.chat_history[-1]["content"]
+        match = re.search(r"اسمي\s+(\w+)", last_msg)
+        if match:
+            st.session_state.user_name = match.group(1)
+            st.session_state.chat_history.append({"role": "assistant", "content": f"أهلاً بك {st.session_state.user_name}! كيف أقدر أساعدك اليوم؟"})
+            st.rerun()
 
 # -------------------------- مربع الكتابة --------------------------
 user_input = st.chat_input(
@@ -144,21 +159,33 @@ if user_input:
 
         with st.spinner("🔍 جاري البحث..."):
             try:
+                # ===== system_prompt مع اسم المستخدم =====
+                system_prompt = f"""
+أنت نبراس، صديق ذكي تتحدث مع شخص تحبه.
+
+🧠 **شخصيتك**:
+- أنت صديق وليس برنامج أو موقع أخبار.
+- تتذكر محادثاتك مع المستخدم وتتفاعل معها.
+- اسم المستخدم هو: {st.session_state.user_name if st.session_state.user_name else "لم أعرفه بعد"}
+
+🗣️ **أسلوبك**:
+- تحدث كأنك جالس مع صديق في مجلس.
+- نادِ المستخدم باسمه إذا عرفته.
+- لا تستخدم كلمات رسمية مثل: "صرح"، "أكد"، "وكالة".
+- اختصر المعلومة وقلها بأسلوبك الخاص.
+
+🔥 **قاعدة مهمة**:
+- ابحث في الويب عن إجابة سؤال المستخدم.
+- لا تستخدم معرفتك القديمة (قبل 2025).
+- لخص المعلومة وكأنك تشرحها لصديق.
+
+📌 تذكر: أنت نبراس، وليس مذيع أخبار.
+"""
+
                 response = client.responses.create(
                     model="gpt-4o-mini",
                     input=[
-                        {"role": "system", "content": """
-أنت نبراس، مساعد ذكي.
-
-🔥 **تعليمات صارمة**:
-1. **ابحث في الويب** عن إجابة سؤال المستخدم.
-2. **لا تستخدم** أي معرفة لديك قبل سنة 2025.
-3. **لخص** المعلومات بأسلوبك الخاص، وكأنك تتحدث مع صديق.
-4. **لا تنقل** الخبر كأنه من صحيفة، ولا تستخدم كلمات مثل: "صرح"، "أكد"، "وكالة".
-5. إذا لم تجد إجابة، قل: 'ما عندي معلومة محدثة'.
-
-📌 تذكر: أنت صديق ذكي، وليس مذيع أخبار.
-"""},
+                        {"role": "system", "content": system_prompt},
                         *st.session_state.chat_history
                     ],
                     tools=[{"type": "web_search"}],
