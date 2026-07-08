@@ -13,9 +13,14 @@ st.set_page_config(
 )
 
 # -------------------------- المفاتيح --------------------------
+from openai import OpenAl
 API_KEY = st.secrets.get("OPENAI_API_KEY")
-SERPAPI_API_KEY = st.secrets.get("SERPAPI_API_KEY")
+response = client.responses.create)
+ model="gpt-4o-mini"
+ input="ابحث في الويب عن اخر التحديثات"
+ tools[{"type":"web_search"}]
 
+print(response.output_text)
 if not API_KEY:
     st.error("⚠️ المفتاح غير مضاف في إعدادات Streamlit")
     st.stop()
