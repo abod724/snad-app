@@ -5,4 +5,3 @@ python-dotenv
 gtts
 streamlit-chat
 google-search-results
-openAl
