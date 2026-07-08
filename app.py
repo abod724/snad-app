@@ -19,6 +19,9 @@ if "user_name" not in st.session_state:
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = [{"role": "assistant", "content": "مرحبًا، أنا نبراس… ما هو اسمك؟"}]
 
+if "all_chats" not in st.session_state:
+    st.session_state.all_chats = []
+
 # -------------------------- المفتاح --------------------------
 API_KEY = st.secrets.get("OPENAI_API_KEY")
 
@@ -47,35 +50,17 @@ st.markdown("""
     left: 0;
     right: 0;
     background: #ffffff;
-    padding: 12px 25px;
+    padding: 8px 15px;
     border-bottom: 1px solid #e5e7eb;
     display: flex;
     justify-content: space-between;
     align-items: center;
     z-index: 1000;
-}
-.top-left {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.top-left .heart {
-    font-size: 28px;
-    color: #dc2626;
-}
-.top-left .app-name {
-    font-size: 24px;
-    font-weight: 700;
-    color: #1a1a1a;
-}
-.top-center p {
-    margin: 0;
-    font-size: 13px;
-    color: #6b7280;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
 }
 .chat-area {
     max-width: 850px;
-    margin: 80px auto 100px;
+    margin: 70px auto 100px;
 }
 .msg {
     padding: 12px 16px;
@@ -103,20 +88,54 @@ div[data-testid="stChatInput"] input {
     font-weight: 500 !important;
     background: #ffffff !important;
 }
+div[data-testid="stPopover"] button {
+    font-size: 18px !important;
+    padding: 4px 10px !important;
+    border-radius: 8px !important;
+}
+div[data-testid="stPopover"] button:hover {
+    background: #f3f4f6 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
 # -------------------------- الشريط العلوي --------------------------
 st.markdown('<div class="top-bar">', unsafe_allow_html=True)
-col_left, col_center, _ = st.columns([1.5, 2, 1.2])
 
-with col_left:
-    st.markdown('<div class="top-left"><span class="heart">❤️</span><span class="app-name">نبراس</span></div>', unsafe_allow_html=True)
-with col_center:
-    st.markdown('<div class="top-center"><p>مساعدك الذكي – صديقك المخلص</p></div>', unsafe_allow_html=True)
+col1, col2, col3 = st.columns([0.5, 5, 0.8])
+
+with col1:
+    if st.button("✏️ جديد", key="new_chat_btn", help="بدء محادثة جديدة"):
+        user_name = st.session_state.user_name if st.session_state.user_name else ""
+        st.session_state.chat_history = [{"role": "assistant", "content": f"مرحبًا بعودتك {user_name}… كيف أقدر أساعدك اليوم؟"}]
+        st.rerun()
+
+with col2:
+    st.markdown(
+        """
+        <div style="display: flex; justify-content: center; align-items: center; gap: 8px;">
+            <span style="font-size: 20px; color: #dc2626;">❤️</span>
+            <span style="font-size: 20px; font-weight: 700; color: #1a1a1a;">نبراس</span>
+            <span style="font-size: 13px; color: #6b7280;">– صديقك الذكي</span>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+with col3:
+    with st.popover("📋"):
+        if st.session_state.all_chats:
+            for i, c in enumerate(st.session_state.all_chats):
+                if st.button(f"محادثة {i+1} - {c['date']}", use_container_width=True, key=f"chat_{i}"):
+                    st.session_state.chat_history = c["messages"]
+                    st.session_state.user_name = c.get("user_name", st.session_state.user_name)
+                    st.rerun()
+        else:
+            st.info("ما فيه محادثات")
+
 st.markdown('</div>', unsafe_allow_html=True)
 
-# -------------------------- سجل المحادثة --------------------------
+# -------------------------- عرض المحادثة --------------------------
 st.markdown('<div class="chat-area">', unsafe_allow_html=True)
 for msg in st.session_state.chat_history:
     if msg["role"] == "user":
@@ -125,7 +144,7 @@ for msg in st.session_state.chat_history:
         st.markdown(f'<div class="msg bot">{msg["content"]}</div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# -------------------------- طلب اسم المستخدم إذا ما عرفه --------------------------
+# -------------------------- استخراج الاسم --------------------------
 if st.session_state.user_name is None:
     if st.session_state.chat_history and st.session_state.chat_history[-1]["role"] == "user":
         last_msg = st.session_state.chat_history[-1]["content"]
@@ -159,27 +178,21 @@ if user_input:
 
         with st.spinner("🔍 جاري البحث..."):
             try:
-                # ===== system_prompt مع اسم المستخدم =====
                 system_prompt = f"""
 أنت نبراس، صديق ذكي تتحدث مع شخص تحبه.
 
 🧠 **شخصيتك**:
 - أنت صديق وليس برنامج أو موقع أخبار.
-- تتذكر محادثاتك مع المستخدم وتتفاعل معها.
 - اسم المستخدم هو: {st.session_state.user_name if st.session_state.user_name else "لم أعرفه بعد"}
 
 🗣️ **أسلوبك**:
-- تحدث كأنك جالس مع صديق في مجلس.
-- نادِ المستخدم باسمه إذا عرفته.
-- لا تستخدم كلمات رسمية مثل: "صرح"، "أكد"، "وكالة".
-- اختصر المعلومة وقلها بأسلوبك الخاص.
+- تحدث كأنك جالس مع صديق.
+- نادِ المستخدم باسمه.
+- لا تستخدم كلمات رسمية.
 
 🔥 **قاعدة مهمة**:
 - ابحث في الويب عن إجابة سؤال المستخدم.
 - لا تستخدم معرفتك القديمة (قبل 2025).
-- لخص المعلومة وكأنك تشرحها لصديق.
-
-📌 تذكر: أنت نبراس، وليس مذيع أخبار.
 """
 
                 response = client.responses.create(
@@ -195,6 +208,12 @@ if user_input:
                 answer = response.output_text
 
                 st.session_state.chat_history.append({"role": "assistant", "content": answer})
+
+                st.session_state.all_chats.append({
+                    "date": datetime.now().strftime("%H:%M - %d/%m"),
+                    "messages": st.session_state.chat_history.copy(),
+                    "user_name": st.session_state.user_name
+                })
 
                 try:
                     speech = client.audio.speech.create(
