@@ -5,6 +5,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 import requests
 import json
+import base64
 
 # ============================
 #  تحميل المفاتيح
@@ -24,14 +25,10 @@ st.set_page_config(page_title="نبراس", page_icon="✍️", layout="wide")
 #  التحقق من المفاتيح
 # ============================
 if not OPENAI_API_KEY:
-    st.error("⚠️ مفتاح OpenAI غير موجود. أضفه في ملف .env")
+    st.error("⚠️ مفتاح OpenAI غير موجود")
     st.stop()
 
-try:
-    client = OpenAI(api_key=OPENAI_API_KEY)
-except Exception as e:
-    st.error(f"⚠️ خطأ في مفتاح OpenAI: {e}")
-    st.stop()
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 # ============================
 #  ملف الذاكرة
@@ -76,7 +73,6 @@ def save_current_memory():
 #  دالة البحث في الويب
 # ============================
 def search_web(query):
-    """البحث في قوقل عبر Google Custom Search"""
     if not GOOGLE_API_KEY or not GOOGLE_SEARCH_ENGINE_ID:
         return ""
     
@@ -85,7 +81,7 @@ def search_web(query):
         "key": GOOGLE_API_KEY,
         "cx": GOOGLE_SEARCH_ENGINE_ID,
         "q": query,
-        "num": 2
+        "num": 3
     }
     
     try:
@@ -94,22 +90,21 @@ def search_web(query):
         
         if "items" in data:
             results = []
-            for item in data["items"][:2]:
+            for item in data["items"][:3]:
                 snippet = item.get("snippet", "")
                 if snippet:
                     results.append(snippet)
             return "\n".join(results) if results else ""
         return ""
-    except Exception as e:
+    except:
         return ""
 
 # ============================
-#  CSS للواجهة
+#  CSS
 # ============================
 st.markdown("""
 <style>
 #MainMenu, footer, header {visibility: hidden;}
-
 .top-bar {
     display: flex;
     justify-content: space-between;
@@ -123,7 +118,6 @@ st.markdown("""
     right: 0;
     z-index: 1000;
 }
-
 .icon-btn {
     background: transparent !important;
     border: none !important;
@@ -132,7 +126,6 @@ st.markdown("""
     cursor: pointer;
     color: #1a1a1a;
 }
-
 .chat-container {
     margin-top: 65px;
     padding: 10px 20px;
@@ -171,10 +164,73 @@ for msg in st.session_state.messages:
 st.markdown('</div>', unsafe_allow_html=True)
 
 # ============================
-#  مربع الكتابة
+#  أدوات الإدخال
 # ============================
-prompt = st.chat_input("اكتب سؤالك هنا...")
+col1, col2, col3 = st.columns([1, 6, 1])
 
+with col1:
+    audio_value = st.audio_input("🎤", key="audio_input")
+    if audio_value:
+        with st.spinner("🔄 جاري تحويل الصوت..."):
+            try:
+                with open("temp_audio.mp3", "wb") as f:
+                    f.write(audio_value.getvalue())
+                
+                with open("temp_audio.mp3", "rb") as f:
+                    transcript = client.audio.transcriptions.create(
+                        model="whisper-1",
+                        file=f
+                    )
+                
+                st.session_state.audio_text = transcript.text
+                st.rerun()
+            except Exception as e:
+                st.error(f"⚠️ {str(e)}")
+
+with col2:
+    default_text = st.session_state.get("audio_text", "")
+    prompt = st.chat_input("اكتب سؤالك هنا...")
+
+with col3:
+    uploaded_file = st.file_uploader(
+        "📷",
+        type=["jpg", "jpeg", "png", "gif", "webp"],
+        label_visibility="collapsed",
+        key="image_uploader"
+    )
+    
+    if uploaded_file:
+        with st.spinner("🔄 جاري تحليل الصورة..."):
+            try:
+                image_base64 = base64.b64encode(uploaded_file.getvalue()).decode()
+                
+                response = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": "وصف هذه الصورة بالتفصيل:"},
+                                {
+                                    "type": "image_url",
+                                    "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}
+                                }
+                            ]
+                        }
+                    ]
+                )
+                
+                image_description = response.choices[0].message.content
+                st.session_state.messages.append({"role": "user", "content": f"[صورة] {image_description}"})
+                save_current_memory()
+                st.rerun()
+            except Exception as e:
+                st.error(f"⚠️ {str(e)}")
+
+# ============================
+#  ========== هنا تعليمات نبراس ==========
+#  معالجة الكتابة
+# ============================
 if prompt:
     # إضافة سؤال المستخدم
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -187,16 +243,25 @@ if prompt:
     with st.spinner("🔍 نبراس يبحث..."):
         search_results = search_web(prompt)
     
-    # رد نبراس
+    # ============================
+    #  تعليمات نبراس (اللهجة السعودية + البحث)
+    # ============================
     system_prompt = f"""
-    أنت نبراس، مساعد ذكي ومختصر.
-    استخدم المعلومات التالية للإجابة على سؤال المستخدم:
-    
-    {search_results if search_results else "لا توجد معلومات محدثة من البحث."}
-    
-    إذا كانت المعلومات غير كافية، استخدم معرفتك العامة.
+    أنت نبراس، مساعد ذكي يتحدث باللهجة السعودية العامية.
+
+    🎯 تعليمات مهمة جداً:
+    1. **تحدث باللهجة السعودية العامية** (مثل: وش، إيش، كيف الحال، تمام، خلاص، طيب، ماعندي فكرة)
+    2. **ابحث في الويب عن المعلومات الحديثة** واستخدمها في الرد
+    3. **اختصر قدر الإمكان** (جمل قصيرة، نقاط مختصرة)
+    4. **لا تتجاوز 50 كلمة** في الرد الواحد
+    5. **إذا ما عندك معلومة**، قل: "ماعندي فكرة والله"
+
+    📌 معلومات من البحث:
+    {search_results if search_results else "ما لقيت معلومات محدثة من البحث."}
+
+    رد على سؤال المستخدم باللهجة السعودية العامية وباختصار:
     """
-    
+
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -208,7 +273,7 @@ if prompt:
         )
         answer = response.choices[0].message.content
     except Exception as e:
-        answer = f"⚠️ حدث خطأ: {str(e)}"
+        answer = f"⚠️ صار خطأ: {str(e)}"
     
     # إضافة رد نبراس
     st.session_state.messages.append({"role": "assistant", "content": answer})
@@ -216,5 +281,8 @@ if prompt:
     
     with st.chat_message("assistant"):
         st.write(answer)
+    
+    if "audio_text" in st.session_state:
+        del st.session_state.audio_text
     
     st.rerun()
