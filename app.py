@@ -131,11 +131,15 @@ if user_input:
 
         with st.spinner("🔍 جاري البحث..."):
             try:
-                # ===== كود البحث الصحيح من OpenAI =====
+                # ===== كود البحث الصحيح =====
                 response = client.responses.create(
                     model="gpt-4o-mini",
-                    input="ابحث في الويب عن آخر تحديثات ChatGPT واذكر المصادر.",
+                    input=[
+                        {"role": "system", "content": "أنت نبراس، مساعد ذكي. أجب ببساطة ووضوح."},
+                        *st.session_state.chat_history
+                    ],
                     tools=[{"type": "web_search"}],
+                    max_output_tokens=600,
                 )
 
                 answer = response.output_text
