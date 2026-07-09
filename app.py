@@ -255,44 +255,44 @@ if user_input:
     
     full_query = query + files_text
     
-    if full_query.strip():
-        st.session_state.chat_history.append({"role": "user", "content": full_query})
-
-      with st.spinner("🔍 جاري البحث..."):
-            try:
-                user_info = ""
-                if st.session_state.user_name and st.session_state.user_name in memory.get("users", {}):
-                    user_data = memory["users"][st.session_state.user_name]
-                    interests = user_data.get("interests", [])
-                    if interests:
-                        user_info = f"\n📌 اهتمامات المستخدم: {', '.join(interests)}"
-                        
-                system_prompt = f"""
-                أنت نبراس، صديق ذكي تتحدث مع شخص تحبه.
-                
-                **شخصيتك**:
-                - أنت صديق وليس برنامج أو موقع أخبار.
-                - اسم المستخدم هو: {st.session_state.user_name if 'user_name' in st.session_state else 'يا صديقي'}
-                {user_info}
-                
-                **أسلوبك**:
-                - تحدث كأنك جالس مع صديق.
-                - نادِ المستخدم باسمه.
-                - لا تستخدم كلمات رسمية.
-                
-                **قاعدة مهمة**:
-                - ابحث في الويب عن إجابة سؤال المستخدم.
-                - لا تستخدم معرفتك القديمة (قبل 2025).
-                - لخص المعلومة بأسلوبك الخاص.
-                """
-                
-                if st.session_state.user_name and st.session_state.user_name in memory.get("users", {}):
-                    answer = ask_all(st.session_state.chat_history)
-                else:
-                    answer = "مرحباً! سجل اسمك للمتابعة"
+  if full_query.strip():
+            st.session_state.chat_history.append({"role": "user", "content": full_query})
+            
+            with st.spinner("🔍 جاري البحث..."):
+                try:
+                    user_info = ""
+                    if st.session_state.user_name and st.session_state.user_name in memory.get("users", {}):
+                        user_data = memory["users"][st.session_state.user_name]
+                        interests = user_data.get("interests", [])
+                        if interests:
+                            user_info = f"\n📌 اهتمامات المستخدم: {', '.join(interests)}"
+                            
+                    system_prompt = f"""
+                    أنت نبراس، صديق ذكي تتحدث مع شخص تحبه.
                     
-            except Exception as e:
-                st.error(f"عذراً يا صديقي، حدث خطأ أثناء المعالجة: {e}")
+                    **شخصيتك**:
+                    - أنت صديق وليس برنامج أو موقع أخبار.
+                    - اسم المستخدم هو: {st.session_state.user_name if 'user_name' in st.session_state else 'يا صديقي'}
+                    {user_info}
+                    
+                    **أسلوبك**:
+                    - تحدث كأنك جالس مع صديق.
+                    - نادِ المستخدم باسمه.
+                    - لا تستخدم كلمات رسمية.
+                    
+                    **قاعدة مهمة**:
+                    - ابحث في الويب عن إجابة سؤال المستخدم.
+                    - لا تستخدم معرفتك القديمة (قبل 2025).
+                    - لخص المعلومة بأسلوبك الخاص.
+                    """
+                    
+                    if st.session_state.user_name and st.session_state.user_name in memory.get("users", {}):
+                        answer = ask_all(st.session_state.chat_history)
+                    else:
+                        answer = "مرحباً! سجل اسمك للمتابعة"
+                        
+                except Exception as e:
+                    st.error(f"عذراً يا صديقي، حدث خطأ أثناء المعالجة: {e}")
         except Exception as e:
             st.error(f"عذراً يا صديقي، حدث خطأ أثناء المعالجة: {e}")
 st.session_state.chat_history.append({"role": "assistant", "content": answer})
