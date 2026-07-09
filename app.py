@@ -287,17 +287,17 @@ if user_input:
 - لخص المعلومة بأسلوبك الخاص.
 """
 
-             answer = ask_ai(st.session_state.chat_history)
+                 answer = ask_ai(st.session_state.chat_history)
             
-                st.session_state.chat_history.append({"role": "assistant", "content": answer})
-
-                if st.session_state.user_name and st.session_state.user_name in memory["users"]:
-                    memory["users"][st.session_state.user_name]["last_seen"] = datetime.now().strftime("%Y-%m-%d %H:%M")
-                    memory["users"][st.session_state.user_name]["conversations"].append({
-                        "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                        "messages": st.session_state.chat_history[-2:]
-                    })
-                    save_memory(memory)
+                    st.session_state.chat_history.append({"role": "assistant", "content": answer})
+    
+                    if st.session_state.user_name and st.session_state.user_name in memory["users"]:
+                        memory["users"][st.session_state.user_name]["last_seen"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+                        memory["users"][st.session_state.user_name]["conversations"].append({
+                            "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                            "messages": st.session_state.chat_history[-2:]
+                        })
+                        save_memory(memory)
 
                 st.session_state.all_chats.append({
                     "date": datetime.now().strftime("%H:%M - %d/%m"),
