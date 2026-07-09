@@ -288,7 +288,6 @@ if user_input:
 """
 
                  answer = ask_ai(st.session_state.chat_history)
-
 st.session_state.chat_history.append({"role": "assistant", "content": "..."})
 
 if st.session_state.user_name and st.session_state.user_name in memory.get("users", {}):
