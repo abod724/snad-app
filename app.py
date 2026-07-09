@@ -1,5 +1,6 @@
 import streamlit as st
 from openai import OpenAI
+from ai import ask_ai
 import base64
 from datetime import datetime
 import re
