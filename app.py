@@ -287,18 +287,8 @@ if user_input:
 - لخص المعلومة بأسلوبك الخاص.
 """
 
-                response = client.responses.create(
-                    model="gpt-4o-mini",
-                    input=[
-                        {"role": "system", "content": system_prompt},
-                        *st.session_state.chat_history
-                    ],
-                    tools=[{"type": "web_search"}],
-                    max_output_tokens=600,
-                )
-
-                answer = response.output_text
-
+             answer = ask_ai(st.session_state.chat_history)
+            
                 st.session_state.chat_history.append({"role": "assistant", "content": answer})
 
                 if st.session_state.user_name and st.session_state.user_name in memory["users"]:
