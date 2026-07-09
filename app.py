@@ -1,6 +1,5 @@
 import streamlit as st
 from openai import OpenAI
-from ai import ask_ai
 import base64
 from datetime import datetime
 import re
@@ -170,38 +169,38 @@ div[data-testid="stPopover"] button:hover {
 </style>
 """, unsafe_allow_html=True)
 
-# --- (شريط العلوي (نظيف)) ---
+# -------------------------- الشريط العلوي (نظيف) --------------------------
 st.markdown('<div class="top-bar">', unsafe_allow_html=True)
 
-# يسار: أيقونة المحادثات (⊕)
-st.markdown(""" 
+# يسار: أيقونة المحادثات
+st.markdown("""
 <div class="top-left">
-    <button class="icon-btn" onclick="location.reload()" title="محادثة جديدة">⊕</button>
+    <button id="chat-btn" style="font-size: 20px;">💬</button>
 </div>
 """, unsafe_allow_html=True)
 
-# يمين: أيقونة القائمة المنسدلة (☰)
+# يمين: أيقونة الشرطتين (القائمة المنسدلة)
 with st.container():
     col_right, _ = st.columns([0.1, 0.9])
     with col_right:
         with st.popover("☰"):
-            st.markdown("### 📋 المحادثات السابقة")
-            
-            if st.button("➕ محادثة جديدة", use_container_width=True):
-                st.session_state.chat_history = [{"role": "assistant", "content": "مرحباً، أنا نبراس"}]
+            st.markdown("### 📋 المحادثات")
+            if st.button("➕ جديدة", use_container_width=True):
+                user_name = st.session_state.user_name if st.session_state.user_name else ""
+                st.session_state.chat_history = [{"role": "assistant", "content": f"مرحبًا بعودتك {user_name}… كيف أقدر أساعدك اليوم؟"}]
                 st.rerun()
-            
             st.markdown("---")
-            
-            if "all_chats" in st.session_state and st.session_state.all_chats:
-                for i, chat in enumerate(st.session_state.all_chats):
-                    if st.button(f"💬 محادثة {i+1}", use_container_width=True):
-                        st.session_state.chat_history = chat["messages"]
+            if st.session_state.all_chats:
+                for i, c in enumerate(st.session_state.all_chats[::-1]):
+                    if st.button(f"💬 {c['date']}", use_container_width=True, key=f"chat_top_{i}"):
+                        st.session_state.chat_history = c["messages"]
+                        st.session_state.user_name = c.get("user_name", st.session_state.user_name)
                         st.rerun()
             else:
-                st.info("لا توجد محادثات سابقة")
+                st.info("ما فيه محادثات")
 
 st.markdown('</div>', unsafe_allow_html=True)
+
 # -------------------------- عرض المحادثة --------------------------
 st.markdown('<div class="chat-area">', unsafe_allow_html=True)
 
@@ -286,7 +285,6 @@ if user_input:
 - لا تستخدم معرفتك القديمة (قبل 2025).
 - لخص المعلومة بأسلوبك الخاص.
 """
-
 if st.session_state.user_name and st.session_state.user_name in memory.get("users", {}):
     answer = ask_all(st.session_state.chat_history)
 else:
@@ -310,6 +308,15 @@ else:
             "messages": st.session_state.chat_history[-2:]
         }]
     }
+    })
+else:
+    memory["users"][user_key] = {
+        "last_seen": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "conversations": [{
+            "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "messages": st.session_state.chat_history[-2:]
+        }]
+    }
 
 save_memory(memory)
 
@@ -318,21 +325,20 @@ st.session_state.all_chats.append({
     "messages": st.session_state.chat_history.copy(),
     "user_name": st.session_state.user_name if st.session_state.user_name else "زائر"
 })
-else:
-    if st.session_state.user_name:
-        # إنشاء مستخدم جديد
-        memory["users"][st.session_state.user_name] = {
-            "last_seen": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "conversations": []
-        }
+                if st.session_state.user_name and st.session_state.user_name in memory["users"]:
+                    memory["users"][st.session_state.user_name]["last_seen"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+                    memory["users"][st.session_state.user_name]["conversations"].append({
+                        "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                        "messages": st.session_state.chat_history[-2:]
+                    })
+                    save_memory(memory)
 
-save_memory(memory)
+                st.session_state.all_chats.append({
+                    "date": datetime.now().strftime("%H:%M - %d/%m"),
+                    "messages": st.session_state.chat_history.copy(),
+                    "user_name": st.session_state.user_name
+                })
 
-st.session_state.all_chats.append({
-    "date": datetime.now().strftime("%Y:%M - %d/%m"),
-    "messages": st.session_state.chat_history.copy(),
-    "user_name": st.session_state.user_name
-})
                 try:
                     speech = client.audio.speech.create(
                         model="tts-1",
