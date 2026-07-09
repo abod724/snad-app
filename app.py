@@ -287,18 +287,37 @@ if user_input:
 - لخص المعلومة بأسلوبك الخاص.
 """
 
- answer = ask_all(st.session_state.chat_history)
-
-st.session_state.chat_history.append({"role": "assistant", "content": "..."})
-
 if st.session_state.user_name and st.session_state.user_name in memory.get("users", {}):
-    # تحديث آخر ظهور
-    memory["users"][st.session_state.user_name]["last_seen"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    # إضافة المحادثة الجديدة
-    memory["users"][st.session_state.user_name]["conversations"].append({
+    answer = ask_all(st.session_state.chat_history)
+else:
+    answer = "مرحباً! سجل اسمك للمتابعة."
+
+st.session_state.chat_history.append({"role": "assistant", "content": answer})
+
+user_key = st.session_state.user_name if st.session_state.user_name else "زائر"
+
+if user_key in memory.get("users", {}):
+    memory["users"][user_key]["last_seen"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    memory["users"][user_key]["conversations"].append({
         "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "messages": st.session_state.chat_history[-2:]
     })
+else:
+    memory["users"][user_key] = {
+        "last_seen": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "conversations": [{
+            "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "messages": st.session_state.chat_history[-2:]
+        }]
+    }
+
+save_memory(memory)
+
+st.session_state.all_chats.append({
+    "date": datetime.now().strftime("%Y:%M - %d/%m"),
+    "messages": st.session_state.chat_history.copy(),
+    "user_name": st.session_state.user_name if st.session_state.user_name else "زائر"
+})
 else:
     if st.session_state.user_name:
         # إنشاء مستخدم جديد
