@@ -286,10 +286,12 @@ if user_input:
 - لخص المعلومة بأسلوبك الخاص.
 """
 if st.session_state.user_name and st.session_state.user_name in memory.get("users", {}):
-    answer = ask_all(st.session_state.chat_history)
-else:
-    answer = "مرحباً! سجل اسمك للمتابعة."
-
+                answer = ask_all(st.session_state.chat_history)
+            else:
+                answer = "مرحباً! سجل اسمك للمتابعة"
+                
+        except Exception as e:
+            st.error(f"عذراً يا صديقي، حدث خطأ أثناء المعالجة: {e}")
 st.session_state.chat_history.append({"role": "assistant", "content": answer})
 
 user_key = st.session_state.user_name if st.session_state.user_name else "زائر"
