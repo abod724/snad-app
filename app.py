@@ -5,6 +5,8 @@ from datetime import datetime
 import re
 import json
 import os
+import pandas as pd
+from io import StringIO
 
 # -------------------------- إعدادات الصفحة --------------------------
 st.set_page_config(
@@ -137,6 +139,15 @@ st.markdown("""
     margin-right: auto;
     border-bottom-left-radius: 4px;
 }
+/* تنسيق المرفقات */
+.uploaded-file {
+    background: #f0f4ff;
+    border-radius: 12px;
+    padding: 8px 14px;
+    margin: 4px 0;
+    display: inline-block;
+    border: 1px solid #e5e7eb;
+}
 div[data-testid="stChatInput"] {
     background: #ffffff !important;
     border: 1px solid #e5e7eb !important;
@@ -153,11 +164,9 @@ div[data-testid="stChatInput"] button {
     color: #ffffff !important;
     border-radius: 50% !important;
 }
-/* إخفاء أيقونات Streamlit الزائدة */
 .st-emotion-cache-1v0mbdj {
     display: none !important;
 }
-/* تنسيق المنسدلة */
 div[data-testid="stPopover"] button {
     font-size: 20px !important;
     padding: 4px 8px !important;
@@ -249,14 +258,34 @@ if user_input:
     query = user_input.text.strip() if hasattr(user_input, 'text') else str(user_input).strip()
     
     files_text = ""
+    uploaded_files_data = []
     if hasattr(user_input, 'files') and user_input.files:
         for file in user_input.files:
-            files_text += f"\n[ملف مرفوع: {file.name}]"
+            file_extension = file.name.split('.')[-1].lower()
+            files_text += f"\n[📎 ملف مرفوع: {file.name}]"
+            
+            # محاولة قراءة محتوى الملفات النصية
+            try:
+                if file_extension in ['txt', 'csv']:
+                    content = file.read().decode('utf-8')
+                    uploaded_files_data.append(f"📄 {file.name}:\n{content[:500]}" + ("..." if len(content) > 500 else ""))
+                elif file_extension in ['jpg', 'jpeg', 'png']:
+                    # عرض الصورة في المحادثة (سيتم عرضها أسفل)
+                    uploaded_files_data.append(f"🖼️ {file.name} (صورة)")
+                else:
+                    uploaded_files_data.append(f"📄 {file.name} (تم رفعه)")
+            except:
+                uploaded_files_data.append(f"📄 {file.name} (تم رفعه)")
     
     full_query = query + files_text
     
     if full_query.strip():
         st.session_state.chat_history.append({"role": "user", "content": full_query})
+        
+        # عرض المرفقات في المحادثة
+        if uploaded_files_data:
+            for file_data in uploaded_files_data:
+                st.session_state.chat_history.append({"role": "user", "content": file_data})
 
         with st.spinner("🔍 جاري البحث..."):
             try:
@@ -314,6 +343,7 @@ if user_input:
                     "user_name": st.session_state.user_name
                 })
 
+                # تشغيل الصوت
                 try:
                     speech = client.audio.speech.create(
                         model="tts-1",
@@ -324,7 +354,7 @@ if user_input:
                     audio_b64 = base64.b64encode(speech.content).decode("utf-8")
                     st.audio(f"data:audio/mp3;base64,{audio_b64}", format="audio/mp3")
                 except Exception:
-                    pass
+                    st.warning("⚠️ تعذر تشغيل الصوت، ولكن النص متاح.")
 
                 st.rerun()
 
