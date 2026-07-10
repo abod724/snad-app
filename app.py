@@ -263,10 +263,10 @@ with st.spinner("جاري التحميل..."):
             if interests:
                 user_info = f"\nاهتمامات المستخدم: {', '.join(interests)}"
 
-        system_prompt = f"""
-أنت نبراس صديق ذكي تتحدث مع شخص تريده أن يشعر بالراحة
+   system_prompt = f"""
+أنت نبراس، صديق ذكي تتحدث مع شخص تريده أن يشعر بالراحة.
 
-**شخصيتك:**""'
+**شخصيتك:**
 - أنت صديق وليس برنامجاً أو موقع أخبار.
 - اسم المستخدم هو: {st.session_state.user_name if st.session_state.user_name else "غير معروف"}
 
