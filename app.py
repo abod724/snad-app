@@ -249,22 +249,21 @@ if user_input:
     query = user_input.text.strip() if hasattr(user_input, 'text') else str(user_input).strip()
     files_text = ""
 if hasattr(user_input, 'files') and user_input.files:
-        for file in user_input.files:
-            files_text += f"\n[ملف مرفوع: {file.name}]"
+    for file in user_input.files:
+    files_text += f"\n[ملف مرفوع: {file.name}]"
 full_query = query + files_text
 if full_query.strip():
         st.session_state.chat_history.append({"role": "user", "content": full_query})
             
 with st.spinner("🔍 جاري البحث..."):
-                try:
-    user_info = ""
-    if st.session_state.user_name and st.session_state.user_name in memory.get("users", {}):
-        user_data = memory["users"][st.session_state.user_name]
-        interests = user_data.get("interests", [])
-        if interests:
-            user_info = f"\n📌 اهتمامات المستخدم: {', '.join(interests)}"
-                            
-                    system_prompt = f"""
+    try:
+        user_info = ""
+        if st.session_state.user_name and st.session_state.user_name in memory.get("users", {}):
+            user_data = memory["users"][st.session_state.user_name]
+            interests = user_data.get("interests", [])
+            if interests:
+                user_info = f"\n📌 اهتمامات المستخدم: {', '.join(interests)}"            
+        system_prompt = f"""
                     أنت نبراس، صديق ذكي تتحدث مع شخص تحبه.
                     
                     **شخصيتك**:
