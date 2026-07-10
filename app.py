@@ -5,8 +5,6 @@ from datetime import datetime
 import re
 import json
 import os
-from PIL import Image
-import io
 
 # ============================================================
 # 1. إعدادات الصفحة
@@ -15,7 +13,7 @@ st.set_page_config(
     page_title="نبراس",
     page_icon="💬",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
 # ============================================================
@@ -25,7 +23,6 @@ API_KEY = st.secrets.get("OPENAI_API_KEY")
 if not API_KEY:
     st.error("🔴 مفتاح OpenAI غير مضاف")
     st.stop()
-
 client = OpenAI(api_key=API_KEY)
 
 # ============================================================
@@ -55,56 +52,42 @@ if "sessions" not in st.session_state:
 memory = load_memory()
 
 # ============================================================
-# 4. CSS - واجهة أنيقة
+# 4. الشريط الجانبي (القائمة والمحادثات والصوت)
+# ============================================================
+with st.sidebar:
+    st.markdown("## 💬 نبراس")
+    st.markdown("---")
+    
+    if st.button("➕ محادثة جديدة", use_container_width=True):
+        st.session_state.messages = [{"role": "assistant", "content": "مرحباً، أنا نبراس. كيف يمكنني مساعدتك؟"}]
+        st.rerun()
+    
+    st.markdown("### 📋 المحادثات السابقة")
+    if st.session_state.sessions:
+        for i, s in enumerate(st.session_state.sessions[::-1]):
+            if st.button(f"💬 {s['date']}", key=f"side_{i}", use_container_width=True):
+                st.session_state.messages = s["messages"]
+                st.rerun()
+    else:
+        st.info("لا توجد محادثات سابقة")
+    
+    st.markdown("---")
+    st.markdown("### 🎤 الصوت")
+    if st.button("🎤 اضغط للتحدث", use_container_width=True):
+        st.warning("سيتم إضافة التسجيل الصوتي قريباً")
+
+# ============================================================
+# 5. واجهة المحادثة
 # ============================================================
 st.markdown("""
 <style>
     #MainMenu, footer, header { visibility: hidden; }
     .stApp { background: #f7f7f8; }
-
-    /* شريط علوي */
-    .top-bar {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        background: rgba(255,255,255,0.95);
-        backdrop-filter: blur(12px);
-        padding: 6px 20px;
-        border-bottom: 1px solid rgba(0,0,0,0.04);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        z-index: 1000;
-        height: 44px;
-    }
-    .top-bar .icon { font-size: 16px; color: #1a1a1a; }
-    .top-bar .actions { display: flex; gap: 4px; }
-    .top-bar .actions button {
-        background: transparent;
-        border: none;
-        cursor: pointer;
-        font-size: 16px;
-        padding: 4px 8px;
-        border-radius: 50%;
-        color: #444;
-        transition: 0.2s;
-        width: 30px;
-        height: 30px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    .top-bar .actions button:hover { background: #f0f0f0; }
-
-    /* منطقة المحادثة */
     .chat-container {
         max-width: 750px;
-        margin: 60px auto 80px;
+        margin: 20px auto 60px;
         padding: 0 20px;
     }
-
-    /* رسائل */
     .msg-user {
         padding: 10px 16px;
         margin: 4px 0 8px auto;
@@ -132,15 +115,12 @@ st.markdown("""
         box-shadow: 0 1px 4px rgba(0,0,0,0.04);
         clear: both;
     }
-
     .chat-image {
         max-width: 250px;
         border-radius: 12px;
         margin: 6px 0;
         border: 1px solid #e5e5e5;
     }
-
-    /* مربع الإدخال */
     .stChatInput {
         border-radius: 30px !important;
         border: 1px solid #e5e5e5 !important;
@@ -161,8 +141,6 @@ st.markdown("""
         color: white !important;
         border: none !important;
     }
-
-    /* تذييل */
     .footer {
         text-align: center;
         color: #aaa;
@@ -172,26 +150,6 @@ st.markdown("""
         margin-top: 20px;
     }
 </style>
-""", unsafe_allow_html=True)
-
-# ============================================================
-# 5. الشريط العلوي (أزرار تعمل)
-# ============================================================
-st.markdown("""
-<div class="top-bar">
-    <span class="icon">💬</span>
-    <div class="actions">
-        <button onclick="document.getElementById('menu').style.display='block'">☰</button>
-        <button onclick="location.reload()">＋</button>
-    </div>
-</div>
-<div id="menu" style="display:none; position:fixed; top:52px; left:16px; background:white; border-radius:14px; padding:6px; z-index:999; min-width:200px; box-shadow:0 8px 40px rgba(0,0,0,0.12); border:1px solid rgba(0,0,0,0.04);">
-    <div style="padding:10px 14px; border-radius:10px; cursor:pointer; font-size:14px;" onclick="location.reload()">➕ محادثة جديدة</div>
-    <div style="height:1px; background:#e5e5e5; margin:4px 10px;"></div>
-    <div style="padding:10px 14px; border-radius:10px; cursor:pointer; font-size:14px;" onclick="document.getElementById('menu').style.display='none'">📋 المحادثات السابقة</div>
-    <div style="height:1px; background:#e5e5e5; margin:4px 10px;"></div>
-    <div style="padding:10px 14px; border-radius:10px; cursor:pointer; font-size:14px; color:#e74c3c;" onclick="document.getElementById('menu').style.display='none'">إغلاق</div>
-</div>
 """, unsafe_allow_html=True)
 
 # ============================================================
@@ -225,56 +183,30 @@ if st.session_state.user_name is None:
             st.rerun()
 
 # ============================================================
-# 8. مربع الإدخال (صوت + صور)
+# 8. مربع الإدخال
 # ============================================================
-# العمود الأول: مربع الكتابة + زر الصوت
-col1, col2 = st.columns([10, 1])
-
-with col1:
-    user_input = st.chat_input(
-        "اكتب سؤالك... أو ارفع صورة",
-        accept_file=True,
-        file_type=["jpg", "jpeg", "png", "gif", "webp"]
-    )
-
-with col2:
-    # زر الصوت داخل مربع الإدخال
-    st.markdown("""
-    <div style="display: flex; align-items: center; justify-content: center; height: 100%; padding-top: 8px;">
-        <button id="audioBtn" style="
-            background: transparent;
-            border: none;
-            font-size: 22px;
-            cursor: pointer;
-            color: #444;
-            padding: 6px 10px;
-            border-radius: 50%;
-            transition: 0.2s;
-        " onclick="toggleRecording()">🎤</button>
-    </div>
-    """, unsafe_allow_html=True)
+user_input = st.chat_input(
+    "اكتب سؤالك... أو ارفع صورة",
+    accept_file=True,
+    file_type=["jpg", "jpeg", "png", "gif", "webp"]
+)
 
 # ============================================================
-# 9. معالجة الإدخال (نص + صور + بحث ويب + صوت)
+# 9. معالجة الإدخال
 # ============================================================
 if user_input:
     query = user_input.text.strip() if hasattr(user_input, 'text') else str(user_input).strip()
     
-    # معالجة الصور
     uploaded_images = []
     if hasattr(user_input, 'files') and user_input.files:
         for file in user_input.files:
             try:
                 img_bytes = file.getvalue()
                 img_b64 = base64.b64encode(img_bytes).decode()
-                uploaded_images.append({
-                    "name": file.name,
-                    "data": img_b64
-                })
+                uploaded_images.append({"name": file.name, "data": img_b64})
             except:
                 pass
     
-    # بناء رسالة المستخدم
     user_message = query
     if uploaded_images:
         if query:
@@ -294,7 +226,6 @@ if user_input:
         with st.chat_message("assistant"):
             with st.spinner("نبراس يفكر..."):
                 try:
-                    # بحث ويب محدث
                     search_results = ""
                     try:
                         search_response = client.responses.create(
@@ -342,7 +273,6 @@ if user_input:
                         )
                     
                     answer = response.choices[0].message.content
-                    
                     st.session_state.messages.append({"role": "assistant", "content": answer})
                     st.markdown(f'<div class="msg-bot">{answer}</div>', unsafe_allow_html=True)
                     
@@ -351,7 +281,6 @@ if user_input:
                         "messages": st.session_state.messages.copy()
                     })
                     
-                    # تشغيل الصوت تلقائياً
                     try:
                         speech = client.audio.speech.create(
                             model="tts-1",
