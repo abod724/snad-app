@@ -247,14 +247,11 @@ user_input = st.chat_input(
 # -------------------------- معالجة الإدخال --------------------------
 if user_input:
     query = user_input.text.strip() if hasattr(user_input, 'text') else str(user_input).strip()
-    
-files_text = ""
+    files_text = ""
 if hasattr(user_input, 'files') and user_input.files:
         for file in user_input.files:
             files_text += f"\n[ملف مرفوع: {file.name}]"
-    
-    full_query = query + files_text
-    
+full_query = query + files_text
 if full_query.strip():
         st.session_state.chat_history.append({"role": "user", "content": full_query})
             
