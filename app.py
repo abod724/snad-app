@@ -264,7 +264,7 @@ with st.spinner("جاري التحميل..."):
                 user_info = f"\nاهتمامات المستخدم: {', '.join(interests)}"
 
         system_prompt = f"""
-- أنت صديق وليس برنامجاً أو موقع أخبار.
+    
 - اسم المستخدم هو: {st.session_state.user_name if st.session_state.user_name else "غير معروف"}
 
 **أسلوبك:**
