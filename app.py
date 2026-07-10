@@ -52,7 +52,7 @@ if "sessions" not in st.session_state:
 memory = load_memory()
 
 # ============================================================
-# 4. CSS - واجهة ChatGPT بالضبط
+# 4. CSS - واجهة أنيقة مثل ChatGPT
 # ============================================================
 st.markdown("""
 <style>
@@ -60,7 +60,7 @@ st.markdown("""
     #MainMenu, footer, header { visibility: hidden; }
     .stApp { background: #f7f7f8; }
 
-    /* شريط علوي - مثل ChatGPT */
+    /* شريط علوي - بسيط ونظيف */
     .top-bar {
         position: fixed;
         top: 0;
@@ -68,7 +68,7 @@ st.markdown("""
         right: 0;
         background: rgba(255,255,255,0.95);
         backdrop-filter: blur(12px);
-        padding: 8px 24px;
+        padding: 6px 24px;
         border-bottom: 1px solid rgba(0,0,0,0.04);
         display: flex;
         justify-content: space-between;
@@ -98,19 +98,22 @@ st.markdown("""
     .top-bar .actions {
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: 6px;
     }
-    .top-bar .actions button {
+    .top-bar .actions .btn-icon {
         background: transparent;
         border: none;
         cursor: pointer;
-        font-size: 16px;
+        font-size: 18px;
         padding: 6px 10px;
         border-radius: 30px;
         color: #444;
         transition: 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 4px;
     }
-    .top-bar .actions button:hover {
+    .top-bar .actions .btn-icon:hover {
         background: #f0f0f0;
     }
 
@@ -121,7 +124,7 @@ st.markdown("""
         padding: 0 20px;
     }
 
-    /* رسائل - مثل ChatGPT */
+    /* رسائل - فقاعات مثل ChatGPT */
     .msg-user {
         padding: 10px 16px;
         margin: 4px 0 8px auto;
@@ -150,7 +153,7 @@ st.markdown("""
         clear: both;
     }
 
-    /* الصور */
+    /* الصور في المحادثة */
     .chat-image {
         max-width: 250px;
         border-radius: 12px;
@@ -158,7 +161,7 @@ st.markdown("""
         border: 1px solid #e5e5e5;
     }
 
-    /* مربع الإدخال - مثل ChatGPT */
+    /* مربع الإدخال - مثل ChatGPT (ثابت في الأسفل) */
     .stChatInput {
         border-radius: 30px !important;
         border: 1px solid #e5e5e5 !important;
@@ -170,7 +173,7 @@ st.markdown("""
         left: 50% !important;
         transform: translateX(-50%) !important;
         width: 750px !important;
-        max-width: 90% !important;
+        max-width: 92% !important;
         z-index: 999 !important;
     }
     .stChatInput input {
@@ -192,7 +195,7 @@ st.markdown("""
         text-align: center;
         color: #aaa;
         font-size: 12px;
-        padding: 16px 0 80px;
+        padding: 16px 0 90px;
         border-top: 1px solid #f0f0f0;
         margin-top: 20px;
     }
@@ -200,40 +203,40 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============================================================
-# 5. الشريط العلوي
+# 5. الشريط العلوي (أزرار تعمل)
 # ============================================================
-col1, col2, col3 = st.columns([2, 6, 2])
-with col1:
-    st.markdown("""
-    <div class="top-bar">
-        <div class="brand">
-            <span class="icon">💬</span> نبراس
-        </div>
+st.markdown("""
+<div class="top-bar">
+    <div class="brand">
+        <span class="icon">💬</span> نبراس
     </div>
-    """, unsafe_allow_html=True)
+    <div class="actions">
+        <button class="btn-icon" id="menuBtn">☰</button>
+        <button class="btn-icon" id="newChatBtn">＋</button>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
-# الأزرار في الشريط العلوي باستخدام أعمدة جانبية
-with st.container():
-    col_left, col_center, col_right = st.columns([1, 6, 1])
-    with col_left:
-        with st.popover("☰"):
-            st.markdown("### 📋 المحادثات")
-            if st.button("➕ محادثة جديدة", use_container_width=True):
-                st.session_state.messages = [{"role": "assistant", "content": "مرحباً، أنا نبراس. كيف يمكنني مساعدتك؟"}]
-                st.rerun()
-            st.markdown("---")
-            if st.session_state.sessions:
-                for i, s in enumerate(st.session_state.sessions[::-1]):
-                    if st.button(f"💬 {s['date']}", key=f"top_{i}", use_container_width=True):
-                        st.session_state.messages = s["messages"]
-                        st.rerun()
-            else:
-                st.info("لا توجد محادثات")
-    
-    with col_right:
-        if st.button("➕", key="new_chat_top"):
+# أزرار الشريط العلوي عبر أعمدة (تعمل فعلاً)
+col1, col2, col3 = st.columns([1, 10, 1])
+with col1:
+    with st.popover("☰"):
+        st.markdown("### 📋 المحادثات")
+        if st.button("➕ محادثة جديدة", use_container_width=True):
             st.session_state.messages = [{"role": "assistant", "content": "مرحباً، أنا نبراس. كيف يمكنني مساعدتك؟"}]
             st.rerun()
+        st.markdown("---")
+        if st.session_state.sessions:
+            for i, s in enumerate(st.session_state.sessions[::-1]):
+                if st.button(f"💬 {s['date']}", key=f"pop_{i}", use_container_width=True):
+                    st.session_state.messages = s["messages"]
+                    st.rerun()
+        else:
+            st.info("لا توجد محادثات سابقة")
+with col3:
+    if st.button("➕", key="new_chat_header"):
+        st.session_state.messages = [{"role": "assistant", "content": "مرحباً، أنا نبراس. كيف يمكنني مساعدتك؟"}]
+        st.rerun()
 
 # ============================================================
 # 6. عرض المحادثة
@@ -266,31 +269,49 @@ if st.session_state.user_name is None:
             st.rerun()
 
 # ============================================================
-# 8. مربع الإدخال (مع رفع الصور)
+# 8. مربع الإدخال (مع زر صوت داخلي)
 # ============================================================
-user_input = st.chat_input(
-    "اكتب سؤالك... أو ارفع صورة",
-    accept_file=True,
-    file_type=["jpg", "jpeg", "png", "gif", "webp"]
-)
+# عمودان: الأول لمربع الكتابة، الثاني لزر الصوت
+col_input, col_audio = st.columns([12, 1])
+
+with col_input:
+    user_input = st.chat_input(
+        "اكتب سؤالك... أو ارفع صورة",
+        accept_file=True,
+        file_type=["jpg", "jpeg", "png", "gif", "webp"]
+    )
+
+with col_audio:
+    # زر الصوت داخل مربع الإدخال
+    st.markdown("""
+    <div style="display: flex; align-items: center; justify-content: center; height: 100%; padding-top: 6px;">
+        <button id="audioBtn" style="
+            background: transparent;
+            border: none;
+            font-size: 22px;
+            cursor: pointer;
+            color: #444;
+            padding: 6px 10px;
+            border-radius: 50%;
+            transition: 0.2s;
+        " onclick="toggleRecording()">🎤</button>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ============================================================
-# 9. معالجة الإدخال (نص + صور + بحث ويب + صوت)
+# 9. معالجة الإدخال (نص + صور + بحث + صوت)
 # ============================================================
 if user_input:
     query = user_input.text.strip() if hasattr(user_input, 'text') else str(user_input).strip()
     
-    # معالجة الصور
+    # معالجة الصور المرفوعة
     uploaded_images = []
     if hasattr(user_input, 'files') and user_input.files:
         for file in user_input.files:
             try:
                 img_bytes = file.getvalue()
                 img_b64 = base64.b64encode(img_bytes).decode()
-                uploaded_images.append({
-                    "name": file.name,
-                    "data": img_b64
-                })
+                uploaded_images.append({"name": file.name, "data": img_b64})
             except:
                 pass
     
@@ -396,3 +417,59 @@ st.markdown("""
     نبراس · صديقك الذكي · 2026
 </div>
 """, unsafe_allow_html=True)
+
+# ============================================================
+# 11. كود جافا سكريبت لتسجيل الصوت (يعمل داخل المتصفح)
+# ============================================================
+st.components.v1.html("""
+<script>
+let mediaRecorder;
+let audioChunks = [];
+let isRecording = false;
+
+function toggleRecording() {
+    const btn = document.getElementById('audioBtn');
+    
+    if (isRecording) {
+        mediaRecorder.stop();
+        isRecording = false;
+        btn.textContent = '🎤';
+        btn.style.color = '#444';
+        return;
+    }
+    
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+            
+            mediaRecorder.ondataavailable = event => {
+                audioChunks.push(event.data);
+            };
+            
+            mediaRecorder.onstop = () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const base64Audio = e.target.result.split(',')[1];
+                    // إرسال الصوت إلى الخادم (يمكنك ربطه بـ API تحويل الصوت إلى نص)
+                    // هنا نضع الكود المطلوب لإرسال الصوت
+                    alert('تم تسجيل الصوت، سيتم إرساله قريباً');
+                };
+                reader.readAsDataURL(audioBlob);
+                btn.textContent = '🎤';
+                btn.style.color = '#444';
+                isRecording = false;
+            };
+            
+            mediaRecorder.start();
+            isRecording = true;
+            btn.textContent = '⏹️';
+            btn.style.color = '#e74c3c';
+        })
+        .catch(() => {
+            alert('الرجاء السماح بالوصول إلى المايكروفون');
+        });
+}
+</script>
+""", height=0)
