@@ -5,3 +5,7 @@ python-dotenv
 gtts
 streamlit-chat
 google-search-results
+flask
+flask-cors
+openai
+gtts
