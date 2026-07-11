@@ -1,24 +1,33 @@
 import streamlit as st
 from openai import OpenAI
 import os
+import base64
 
 st.set_page_config(page_title="نبراس", page_icon="💬", layout="wide", initial_sidebar_state="collapsed")
 
+# ================================
+# 1. المفتاح والعميل
+# ================================
 API_KEY = st.secrets.get("OPENAI_API_KEY")
 if not API_KEY:
     st.error("🔴 مفتاح OpenAI غير مضاف")
     st.stop()
 client = OpenAI(api_key=API_KEY)
 
+# ================================
+# 2. الذاكرة
+# ================================
 if "messages" not in st.session_state:
-    st.session_state.messages = [{"role": "system", "content": "أنت نبراس، صديق ذكي ودود."},
-                                 {"role": "assistant", "content": "مرحباً، أنا نبراس. كيف يمكنني مساعدتك؟"}]
+    st.session_state.messages = [
+        {"role": "system", "content": "أنت نبراس، صديق ذكي ودود، تجيب بأسلوب بسيط وواضح."},
+        {"role": "assistant", "content": "مرحباً، أنا نبراس. كيف يمكنني مساعدتك؟"}
+    ]
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-# ============================================================
-# 1. مترجم لغة عين (يظهر في الشريط الجانبي)
-# ============================================================
+# ================================
+# 3. مترجم لغة عين (أداة جانبية)
+# ================================
 def عين_مترجم():
     st.subheader("🧠 مترجم لغة عين")
     st.caption("اكتب كوداً بلغة عربية (عين) وسيترجم إلى بايثون وينفذ.")
@@ -84,14 +93,16 @@ def عين_مترجم():
     </html>
     """, height=400, scrolling=True)
 
-# ============================================================
-# 2. الشريط الجانبي
-# ============================================================
+# ================================
+# 4. الشريط الجانبي
+# ================================
 with st.sidebar:
     st.markdown("### 💬 نبراس")
     if st.button("➕ محادثة جديدة", use_container_width=True):
-        st.session_state.messages = [{"role": "system", "content": "أنت نبراس، صديق ذكي ودود."},
-                                     {"role": "assistant", "content": "مرحباً، أنا نبراس. كيف يمكنني مساعدتك؟"}]
+        st.session_state.messages = [
+            {"role": "system", "content": "أنت نبراس، صديق ذكي ودود."},
+            {"role": "assistant", "content": "مرحباً، أنا نبراس. كيف يمكنني مساعدتك؟"}
+        ]
         st.rerun()
     st.markdown("### 📋 المحادثات السابقة")
     if st.session_state.chat_history:
@@ -105,9 +116,9 @@ with st.sidebar:
     with st.expander("🧠 مترجم لغة عين", expanded=False):
         عين_مترجم()
 
-# ============================================================
-# 3. الواجهة الرئيسية
-# ============================================================
+# ================================
+# 5. CSS
+# ================================
 st.markdown("""
 <style>
 #MainMenu, footer, header { visibility: hidden; }
@@ -116,9 +127,14 @@ st.markdown("""
 .msg-user { padding: 10px 16px; margin: 4px 0 8px auto; background: #e9ecef; border-radius: 18px; max-width: 80%; width: fit-content; }
 .msg-bot { padding: 10px 16px; margin: 4px auto 8px 0; background: #ffffff; border-radius: 18px; max-width: 80%; width: fit-content; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
 .stChatInput { border-radius: 30px !important; border: 1px solid #e5e5e5 !important; background: #ffffff !important; padding: 2px 12px !important; position: fixed !important; bottom: 20px !important; left: 50% !important; transform: translateX(-50%) !important; width: 750px !important; max-width: 92% !important; z-index: 999 !important; }
+.stChatInput input { border-radius: 30px !important; padding: 12px 16px !important; font-size: 15px !important; }
+.stChatInput button { background: #1a1a1a !important; border-radius: 50% !important; padding: 4px 12px !important; color: white !important; }
 </style>
 """, unsafe_allow_html=True)
 
+# ================================
+# 6. عرض المحادثة
+# ================================
 st.markdown('<div class="chat-container">', unsafe_allow_html=True)
 for msg in st.session_state.messages:
     if msg["role"] == "user":
@@ -127,17 +143,17 @@ for msg in st.session_state.messages:
         st.markdown(f'<div class="msg-bot">{msg["content"]}</div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ============================================================
-# 4. أيقونة ولد (زر يعمل) فوق مربع الكتابة
-# ============================================================
+# ================================
+# 7. أيقونة ولد (زر يعمل) فوق مربع الكتابة
+# ================================
 col1, col2, col3 = st.columns([1, 10, 1])
 with col1:
     if st.button("👦", key="boy_icon", help="اضغط هنا"):
         st.info("🌟 مرحباً! أنا نبراس، كيف يمكنني مساعدتك؟")
 
-# ============================================================
-# 5. مربع الإدخال
-# ============================================================
+# ================================
+# 8. مربع الإدخال
+# ================================
 prompt = st.chat_input("اكتب سؤالك هنا...", key="main_chat")
 
 if prompt:
