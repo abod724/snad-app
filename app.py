@@ -17,6 +17,8 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
+if "last_selected" not in st.session_state:
+    st.session_state.last_selected = None
 
 def get_time():
     return time.strftime("%I:%M %p")
@@ -91,7 +93,7 @@ for msg in st.session_state.messages:
         st.markdown(f'<div class="msg-bot">{msg["content"]}<span class="time-badge">{get_time()}</span></div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ===== أزرار الفئات السريعة (تغير شخصية نبراس) =====
+# ===== أزرار الفئات السريعة =====
 col1, col2, col3 = st.columns(3)
 with col1:
     if st.button("🤖 إبداع", key="cat_ai", use_container_width=True):
@@ -106,7 +108,7 @@ with col3:
         st.session_state.messages.append({"role": "user", "content": "أريد رداً احترافياً"})
         st.rerun()
 
-# ===== القائمة المنسدلة الذكية (تستدعي الذكاء الاصطناعي فوراً) =====
+# ===== القائمة المنسدلة (تستدعي الذكاء الاصطناعي) =====
 quick_options = [
     "📝 تلخيص نص", "💡 فكرة مشروع", "📚 شرح درس", "🧠 حل مسألة",
     "✍️ كتابة مقال", "🌍 ترجمة", "🔍 بحث", "📊 تحليل",
@@ -117,11 +119,11 @@ quick_options = [
 
 selected = st.selectbox("⚡ اختر خدمة سريعة:", quick_options, index=None, placeholder="📌 اختر من القائمة...")
 
-if selected:
+if selected and selected != st.session_state.last_selected:
+    st.session_state.last_selected = selected
     st.session_state.messages.append({"role": "user", "content": selected})
     with st.spinner("نبراس يفكر..."):
         try:
-            # تحديد شخصية نبراس حسب الاختيار
             system_prompt = "أنت نبراس، مساعد ذكي ومبدع."
             if "إبداع" in selected or "فكرة" in selected or "تصميم" in selected:
                 system_prompt = "أنت نبراس، خبير إبداعي، تقدم أفكاراً مبتكرة."
@@ -142,6 +144,7 @@ if selected:
         except Exception as e:
             st.error(f"⚠️ خطأ: {str(e)}")
 
+# ===== مربع الكتابة =====
 prompt = st.chat_input("اكتب سؤالك هنا...", key="main_chat")
 if prompt:
     st.session_state.messages.append({"role": "user", "content": prompt})
