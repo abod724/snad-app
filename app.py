@@ -20,14 +20,13 @@ if "chat_history" not in st.session_state:
 def get_time():
     return time.strftime("%I:%M %p")
 
-# ===== واجهة CSS الإبداعية =====
+# ===== CSS الإبداعي =====
 st.markdown("""
 <style>
 #MainMenu, footer, header { visibility: hidden; }
 .stApp { background: #f5f7fa; }
 .chat-container { max-width: 750px; margin: 80px auto 100px; padding: 0 20px; }
 
-/* رسائل */
 .msg-user {
     padding: 12px 18px; margin: 6px 0 6px auto; background: #e9ecef;
     border-radius: 20px 20px 4px 20px; max-width: 75%; width: fit-content;
@@ -43,7 +42,6 @@ st.markdown("""
 @keyframes slideInLeft { from { opacity:0; transform:translateX(-20px); } to { opacity:1; transform:translateX(0); } }
 .time-badge { font-size: 10px; color: #aaa; margin-top: 4px; display: block; }
 
-/* الشريط العلوي */
 .top-bar {
     position: fixed; top: 0; left: 0; right: 0;
     background: rgba(255,255,255,0.92); backdrop-filter: blur(12px);
@@ -60,7 +58,6 @@ st.markdown("""
 }
 .top-bar .new-chat-btn:hover { background: #333; transform: scale(1.02); }
 
-/* أزرار الفئات (الإبداع) */
 .category-grid {
     display: flex; gap: 12px; flex-wrap: wrap;
     justify-content: center; margin: 10px 0 20px 0;
@@ -77,7 +74,6 @@ st.markdown("""
     transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.08);
 }
 
-/* مربع الكتابة */
 .stChatInput {
     border-radius: 40px !important; border: 1px solid rgba(0,0,0,0.04) !important;
     background: rgba(255,255,255,0.9) !important; backdrop-filter: blur(10px) !important;
@@ -91,7 +87,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ===== الشريط العلوي (مع زر دردشة جديدة) =====
+# ===== الشريط العلوي =====
 st.markdown("""
 <div class="top-bar">
     <div class="brand"><span>⚡</span> نبراس</div>
@@ -108,7 +104,7 @@ for msg in st.session_state.messages:
         st.markdown(f'<div class="msg-bot">{msg["content"]}<span class="time-badge">{get_time()}</span></div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ===== أزرار الفئات الإبداعية (تفاعل مع كل لمسة) =====
+# ===== أزرار الفئات (تعمل) =====
 st.markdown('<div class="category-grid">', unsafe_allow_html=True)
 
 col1, col2, col3 = st.columns(3)
