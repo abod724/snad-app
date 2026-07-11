@@ -52,7 +52,7 @@ if "sessions" not in st.session_state:
 memory = load_memory()
 
 # ============================================================
-# 4. CSS - واجهة احترافية مثل ChatGPT
+# 4. CSS - واجهة احترافية
 # ============================================================
 st.markdown("""
 <style>
@@ -138,75 +138,33 @@ st.markdown("""
         border: 1px solid #e5e5e5;
     }
 
-    /* مربع الإدخال - مع زر الصوت */
-    .input-container {
-        position: fixed;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 750px;
-        max-width: 92%;
-        z-index: 999;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        background: white;
-        border-radius: 30px;
-        border: 1px solid #e5e5e5;
-        padding: 4px 8px;
-        box-shadow: 0 2px 12px rgba(0,0,0,0.02);
+    /* مربع الإدخال */
+    .stChatInput {
+        border-radius: 30px !important;
+        border: 1px solid #e5e5e5 !important;
+        background: #ffffff !important;
+        padding: 2px 12px !important;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.02) !important;
+        position: fixed !important;
+        bottom: 20px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: 750px !important;
+        max-width: 92% !important;
+        z-index: 999 !important;
     }
-    .input-container .stChatInput {
-        flex: 1;
-        border: none !important;
-        box-shadow: none !important;
-        padding: 0 !important;
-        position: static !important;
-        width: 100% !important;
-        transform: none !important;
-    }
-    .input-container .stChatInput input {
-        border: none !important;
-        padding: 10px 16px !important;
+    .stChatInput input {
+        border-radius: 30px !important;
+        padding: 12px 16px !important;
         font-size: 15px !important;
         background: transparent !important;
     }
-    .input-container .stChatInput button {
-        display: none !important;
-    }
-    .input-container .mic-btn {
-        background: transparent;
-        border: none;
-        font-size: 22px;
-        cursor: pointer;
-        color: #444;
-        padding: 6px 10px;
-        border-radius: 50%;
-        transition: 0.2s;
-    }
-    .input-container .mic-btn:hover {
-        background: #f0f0f0;
-    }
-    .input-container .mic-btn.recording {
-        color: #e74c3c;
-        animation: pulse-ring 1.5s infinite;
-    }
-    @keyframes pulse-ring {
-        0% { opacity: 0.4; }
-        50% { opacity: 1; }
-        100% { opacity: 0.4; }
-    }
-    .input-container .send-btn {
-        background: #1a1a1a;
-        border: none;
-        border-radius: 50%;
-        padding: 6px 12px;
-        color: white;
-        cursor: pointer;
-        font-size: 18px;
-    }
-    .input-container .send-btn:hover {
-        background: #333;
+    .stChatInput button {
+        background: #1a1a1a !important;
+        border-radius: 50% !important;
+        padding: 4px 12px !important;
+        color: white !important;
+        border: none !important;
     }
 
     /* تذييل */
@@ -241,6 +199,7 @@ with st.sidebar:
     
     if st.button("➕ محادثة جديدة", use_container_width=True):
         st.session_state.messages = [{"role": "assistant", "content": "مرحباً، أنا نبراس. كيف يمكنني مساعدتك؟"}]
+        st.session_state.sessions = []
         st.rerun()
     
     st.markdown("### 📋 المحادثات السابقة")
@@ -251,25 +210,6 @@ with st.sidebar:
                 st.rerun()
     else:
         st.info("لا توجد محادثات سابقة")
-    
-    st.markdown("---")
-    st.markdown("### 🎤 الصوت")
-    if st.button("🔊 تشغيل آخر رد", use_container_width=True):
-        if st.session_state.messages and st.session_state.messages[-1]["role"] == "assistant":
-            last_reply = st.session_state.messages[-1]["content"]
-            try:
-                speech = client.audio.speech.create(
-                    model="tts-1",
-                    voice="alloy",
-                    input=last_reply[:300],
-                    response_format="mp3"
-                )
-                audio_b64 = base64.b64encode(speech.content).decode("utf-8")
-                st.audio(f"data:audio/mp3;base64,{audio_b64}", format="audio/mp3")
-            except:
-                st.warning("⚠️ تعذر تشغيل الصوت")
-        else:
-            st.warning("⚠️ لا يوجد رد سابق")
 
 # ============================================================
 # 7. عرض المحادثة
@@ -302,112 +242,61 @@ if st.session_state.user_name is None:
             st.rerun()
 
 # ============================================================
-# 9. مربع الإدخال مع زر الصوت
+# 9. مربع الإدخال (مع زر الصوت عبر st.audio_input)
 # ============================================================
-col_input, col_mic, col_send = st.columns([8, 1, 1])
+col1, col2 = st.columns([10, 1])
 
-with col_input:
+with col1:
     user_input = st.chat_input(
         "اكتب سؤالك... أو ارفع صورة",
         accept_file=True,
         file_type=["jpg", "jpeg", "png", "gif", "webp"]
     )
 
-with col_mic:
-    # زر الصوت
-    st.markdown("""
-    <div style="display: flex; align-items: center; justify-content: center; height: 100%; padding-top: 6px;">
-        <button id="micButton" class="mic-btn" onclick="toggleRecording()">🎤</button>
-    </div>
-    """, unsafe_allow_html=True)
-
-with col_send:
-    st.markdown("""
-    <div style="display: flex; align-items: center; justify-content: center; height: 100%; padding-top: 6px;">
-        <button class="send-btn" onclick="document.querySelector('.stChatInput button').click()">➤</button>
-    </div>
-    """, unsafe_allow_html=True)
-
-# ============================================================
-# 10. كود JavaScript للتسجيل الصوتي
-# ============================================================
-st.components.v1.html("""
-<script>
-let mediaRecorder;
-let audioChunks = [];
-let isRecording = false;
-
-function toggleRecording() {
-    const btn = document.getElementById('micButton');
+with col2:
+    # زر الصوت (يستخدم st.audio_input)
+    audio_value = st.audio_input("🎤", label_visibility="collapsed", key="mic_input")
     
-    if (isRecording) {
-        mediaRecorder.stop();
-        isRecording = false;
-        btn.textContent = '🎤';
-        btn.classList.remove('recording');
-        return;
-    }
-    
-    navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(stream => {
-            mediaRecorder = new MediaRecorder(stream);
-            audioChunks = [];
-            
-            mediaRecorder.ondataavailable = event => {
-                audioChunks.push(event.data);
-            };
-            
-            mediaRecorder.onstop = () => {
-                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const base64Audio = e.target.result.split(',')[1];
-                    // إرسال الصوت إلى الخادم للتحويل إلى نص
-                    fetch('/transcribe', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ audio: base64Audio })
-                    })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.text) {
-                            const input = document.querySelector('.stChatInput input');
-                            input.value = data.text;
-                            // محاكاة الضغط على Enter بعد 300ms
-                            setTimeout(() => {
-                                const event = new Event('input', { bubbles: true });
-                                input.dispatchEvent(event);
-                                setTimeout(() => {
-                                    document.querySelector('.stChatInput button').click();
-                                }, 200);
-                            }, 300);
-                        }
-                    });
-                };
-                reader.readAsDataURL(audioBlob);
-                btn.textContent = '🎤';
-                btn.classList.remove('recording');
-                isRecording = false;
-            };
-            
-            mediaRecorder.start();
-            isRecording = true;
-            btn.textContent = '⏹️';
-            btn.classList.add('recording');
-        })
-        .catch(() => {
-            alert('الرجاء السماح بالوصول إلى المايكروفون');
-        });
-}
-</script>
-""", height=0)
+    if audio_value:
+        with st.spinner("🔄 جاري تحويل الصوت..."):
+            try:
+                # حفظ الصوت مؤقتاً
+                with open("temp_audio.wav", "wb") as f:
+                    f.write(audio_value.getvalue())
+                
+                # تحويل الصوت إلى نص باستخدام Whisper
+                with open("temp_audio.wav", "rb") as f:
+                    transcript = client.audio.transcriptions.create(
+                        model="whisper-1",
+                        file=f
+                    )
+                
+                # إرسال النص إلى مربع الكتابة (محاكاة)
+                st.session_state.audio_text = transcript.text
+                st.rerun()
+            except Exception as e:
+                st.error(f"⚠️ خطأ في الصوت: {str(e)}")
+
+# إذا كان هناك نص من الصوت، ضعه في مربع الكتابة
+if "audio_text" in st.session_state and st.session_state.audio_text:
+    # نضعه في مربع الكتابة عبر session state
+    st.session_state._audio_query = st.session_state.audio_text
+    st.session_state.audio_text = None
 
 # ============================================================
-# 11. معالجة الإدخال (نص + صور + بحث ويب + صوت)
+# 10. معالجة الإدخال
 # ============================================================
+# إذا كان هناك نص من الصوت، استخدمه
+if "_audio_query" in st.session_state and st.session_state._audio_query:
+    query = st.session_state._audio_query
+    st.session_state._audio_query = None
+else:
+    query = None
+
 if user_input:
     query = user_input.text.strip() if hasattr(user_input, 'text') else str(user_input).strip()
-    
+
+if query:
     uploaded_images = []
     if hasattr(user_input, 'files') and user_input.files:
         for file in user_input.files:
@@ -441,7 +330,7 @@ if user_input:
                     try:
                         search_response = client.responses.create(
                             model="gpt-4o-mini",
-                            input=[{"role": "user", "content": f"ابحث عن: {query if query else 'وصف الصورة'}"}],
+                            input=[{"role": "user", "content": f"ابحث عن: {query}"}],
                             tools=[{"type": "web_search"}],
                             max_output_tokens=300
                         )
@@ -511,27 +400,10 @@ if user_input:
                     st.error(f"⚠️ خطأ: {str(e)}")
 
 # ============================================================
-# 12. معالجة الصوت المسجل (تحويل الصوت إلى نص)
+# 11. تذييل
 # ============================================================
-if st.request and st.request.method == "POST" and "/transcribe" in st.request.path:
-    import json
-    data = json.loads(st.request.body)
-    audio_base64 = data.get("audio")
-    if audio_base64:
-        try:
-            import io
-            audio_bytes = base64.b64decode(audio_base64)
-            # استخدم OpenAI Whisper لتحويل الصوت إلى نص
-            from openai import OpenAI
-            client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-            # حفظ الصوت مؤقتاً
-            with open("temp_audio.wav", "wb") as f:
-                f.write(audio_bytes)
-            with open("temp_audio.wav", "rb") as f:
-                transcript = client.audio.transcriptions.create(
-                    model="whisper-1",
-                    file=f
-                )
-            st.json({"text": transcript.text})
-        except Exception as e:
-            st.json({"text": f"خطأ: {str(e)}"})
+st.markdown("""
+<div class="footer">
+    نبراس · صديقك الذكي · 2026
+</div>
+""", unsafe_allow_html=True)
