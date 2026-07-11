@@ -4,14 +4,17 @@ import os
 import time
 import base64
 
+# ===== إعدادات الصفحة =====
 st.set_page_config(page_title="نبراس", page_icon="⚡", layout="wide", initial_sidebar_state="collapsed")
 
+# ===== المفتاح =====
 API_KEY = st.secrets.get("OPENAI_API_KEY")
 if not API_KEY:
     st.error("🔴 مفتاح OpenAI غير مضاف")
     st.stop()
 client = OpenAI(api_key=API_KEY)
 
+# ===== الذاكرة =====
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "chat_history" not in st.session_state:
@@ -20,13 +23,32 @@ if "chat_history" not in st.session_state:
 def get_time():
     return time.strftime("%I:%M %p")
 
-# ===== CSS الإبداعي =====
+# ===== دالة لإضافة رسالة والرد =====
+def add_message_and_reply(text):
+    st.session_state.messages.append({"role": "user", "content": text})
+    with st.chat_message("assistant"):
+        with st.spinner("نبراس يفكر..."):
+            try:
+                response = client.responses.create(
+                    model="gpt-4o-mini",
+                    input=st.session_state.messages,
+                    tools=[{"type": "web_search"}],
+                    max_output_tokens=500
+                )
+                reply = response.output_text
+                st.session_state.messages.append({"role": "assistant", "content": reply})
+                st.rerun()
+            except Exception as e:
+                st.error(f"⚠️ {str(e)}")
+
+# ===== واجهة CSS الإبداعية =====
 st.markdown("""
 <style>
 #MainMenu, footer, header { visibility: hidden; }
 .stApp { background: #f5f7fa; }
 .chat-container { max-width: 750px; margin: 80px auto 100px; padding: 0 20px; }
 
+/* رسائل */
 .msg-user {
     padding: 12px 18px; margin: 6px 0 6px auto; background: #e9ecef;
     border-radius: 20px 20px 4px 20px; max-width: 75%; width: fit-content;
@@ -42,6 +64,7 @@ st.markdown("""
 @keyframes slideInLeft { from { opacity:0; transform:translateX(-20px); } to { opacity:1; transform:translateX(0); } }
 .time-badge { font-size: 10px; color: #aaa; margin-top: 4px; display: block; }
 
+/* الشريط العلوي */
 .top-bar {
     position: fixed; top: 0; left: 0; right: 0;
     background: rgba(255,255,255,0.92); backdrop-filter: blur(12px);
@@ -58,6 +81,7 @@ st.markdown("""
 }
 .top-bar .new-chat-btn:hover { background: #333; transform: scale(1.02); }
 
+/* أزرار الفئات (الإبداع) */
 .category-grid {
     display: flex; gap: 12px; flex-wrap: wrap;
     justify-content: center; margin: 10px 0 20px 0;
@@ -74,6 +98,7 @@ st.markdown("""
     transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.08);
 }
 
+/* مربع الكتابة */
 .stChatInput {
     border-radius: 40px !important; border: 1px solid rgba(0,0,0,0.04) !important;
     background: rgba(255,255,255,0.9) !important; backdrop-filter: blur(10px) !important;
@@ -87,13 +112,14 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ===== الشريط العلوي =====
-st.markdown("""
-<div class="top-bar">
-    <div class="brand"><span>⚡</span> نبراس</div>
-    <button class="new-chat-btn" onclick="location.reload()">➕ دردشة جديدة</button>
-</div>
-""", unsafe_allow_html=True)
+# ===== الشريط العلوي (بزر Streamlit حقيقي) =====
+col1, col2 = st.columns([6, 1])
+with col1:
+    st.markdown('<div class="brand"><span>⚡</span> نبراس</div>', unsafe_allow_html=True)
+with col2:
+    if st.button("➕ دردشة جديدة", key="new_chat_top"):
+        st.session_state.messages = []
+        st.rerun()
 
 # ===== عرض المحادثة =====
 st.markdown('<div class="chat-container">', unsafe_allow_html=True)
@@ -104,43 +130,26 @@ for msg in st.session_state.messages:
         st.markdown(f'<div class="msg-bot">{msg["content"]}<span class="time-badge">{get_time()}</span></div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ===== أزرار الفئات (تعمل) =====
+# ===== أزرار الفئات الإبداعية (تعمل فوراً) =====
 st.markdown('<div class="category-grid">', unsafe_allow_html=True)
 
 col1, col2, col3 = st.columns(3)
 
 with col1:
     if st.button("🤖 إبداع الذكاء الاصطناعي", key="cat_ai", use_container_width=True):
-        st.session_state.messages.append({"role": "user", "content": "أعطني فكرة إبداعية في الذكاء الاصطناعي"})
-        st.rerun()
+        add_message_and_reply("أعطني فكرة إبداعية في الذكاء الاصطناعي")
 
 with col2:
     if st.button("📚 واجبات منزلية", key="cat_homework", use_container_width=True):
-        st.session_state.messages.append({"role": "user", "content": "ساعدني في واجباتي المنزلية"})
-        st.rerun()
+        add_message_and_reply("ساعدني في واجباتي المنزلية")
 
 with col3:
     if st.button("💼 احترافي", key="cat_pro", use_container_width=True):
-        st.session_state.messages.append({"role": "user", "content": "أريد رداً احترافياً"})
-        st.rerun()
+        add_message_and_reply("أريد رداً احترافياً")
 
 st.markdown('</div>', unsafe_allow_html=True)
 
 # ===== مربع الكتابة =====
 prompt = st.chat_input("جار المراسلة...", key="main_chat")
 if prompt:
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("assistant"):
-        with st.spinner("نبراس يفكر..."):
-            try:
-                response = client.responses.create(
-                    model="gpt-4o-mini",
-                    input=st.session_state.messages,
-                    tools=[{"type": "web_search"}],
-                    max_output_tokens=500
-                )
-                reply = response.output_text
-                st.session_state.messages.append({"role": "assistant", "content": reply})
-                st.rerun()
-            except Exception as e:
-                st.error(f"⚠️ {str(e)}")
+    add_message_and_reply(prompt)
