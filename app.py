@@ -144,7 +144,6 @@ with st.sidebar:
     else:
         st.info("لا توجد محادثات سابقة")
     
-    # ===== أضف المترجم هنا =====
     st.markdown("---")
     with st.expander("🧠 مترجم لغة عين", expanded=False):
         عين_مترجم()
@@ -286,6 +285,30 @@ for msg in st.session_state.messages:
         st.markdown(f'<div class="msg-bot">{msg["content"]}</div>', unsafe_allow_html=True)
 
 st.markdown('</div>', unsafe_allow_html=True)
+
+# ============================================================
+# 🟢 أيقونة "ولد" فوق مربع الكتابة
+# ============================================================
+st.markdown("""
+<div style="
+    max-width: 750px;
+    margin: 0 auto 5px;
+    padding: 0 20px;
+    text-align: center;
+    position: relative;
+    z-index: 999;
+">
+    <span style="
+        font-size: 32px;
+        background: #ffffff;
+        padding: 6px 18px;
+        border-radius: 50px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+        border: 1px solid #e5e5e5;
+        display: inline-block;
+    ">👦</span>
+</div>
+""", unsafe_allow_html=True)
 
 # ============================================================
 # مربع الإدخال
