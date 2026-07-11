@@ -25,7 +25,6 @@ if "sound_enabled" not in st.session_state:
 if "pending_prompt" not in st.session_state:
     st.session_state.pending_prompt = None
 
-# دوال مساعدة
 def get_time():
     return time.strftime("%I:%M %p")
 
@@ -38,9 +37,7 @@ def analyze_sentiment(text):
     pos = sum(1 for w in text.split() if w in ["حلو", "جميل", "رائع", "ممتاز", "سعيد", "أحب"])
     neg = sum(1 for w in text.split() if w in ["سيء", "حزين", "مزعج", "كره"])
     return "😊 إيجابي" if pos > neg else "😞 سلبي" if neg > pos else "😐 محايد"
-
-# ======================= مترجم عين =======================
-def عين_مترجم():
+    def عين_مترجم():
     st.markdown("### 🧠 مترجم لغة عين")
     st.components.v1.html("""
     <html>
@@ -86,7 +83,6 @@ def عين_مترجم():
     </html>
     """, height=400, scrolling=True)
 
-# ======================= الشريط الجانبي =======================
 with st.sidebar:
     st.markdown("### ✨ نبراس")
     if st.button("➕ محادثة جديدة", use_container_width=True):
@@ -115,7 +111,6 @@ with st.sidebar:
     with st.expander("🧠 مترجم لغة عين", expanded=False):
         عين_مترجم()
 
-# ======================= CSS =======================
 st.markdown(f"""
 <style>
     #MainMenu, footer, header {{ visibility: hidden; }}
@@ -156,7 +151,6 @@ st.markdown(f"""
 </style>
 """, unsafe_allow_html=True)
 
-# ======================= عرض المحادثة =======================
 st.markdown('<div class="chat-container">', unsafe_allow_html=True)
 for msg in st.session_state.messages:
     if msg["role"] == "user":
@@ -171,23 +165,19 @@ for msg in st.session_state.messages:
         """, unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ======================= اقتراحات ذكية (تعمل) =======================
-suggestions = ["💡 كيف أبدأ مشروعي؟", "🚀 ما هي أحدث أخبار التقنية؟", "🎨 أعطني فكرة إبداعية", "📚 كيف أتعلم البرمجة؟", "🧠 ما هو الذكاء الاصطناعي？"]
+suggestions = ["💡 كيف أبدأ مشروعي؟", "🚀 ما هي أحدث أخبار التقنية؟", "🎨 أعطني فكرة إبداعية", "📚 كيف أتعلم البرمجة؟", "🧠 ما هو الذكاء الاصطناعي؟"]
 st.markdown('<div class="suggestion-chips">', unsafe_allow_html=True)
 cols = st.columns(len(suggestions))
 for i, col in enumerate(cols):
     with col:
         if st.button(suggestions[i], key=f"sug_{i}", use_container_width=True):
-            # نضع النص في session_state ثم نعيد التشغيل
             st.session_state.pending_prompt = suggestions[i]
             st.rerun()
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ======================= معالجة الاقتراحات =======================
 if st.session_state.pending_prompt:
     prompt = st.session_state.pending_prompt
     st.session_state.pending_prompt = None
-    # نعاملها كأن المستخدم كتبها
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("assistant"):
         with st.spinner("نبراس يفكر..."):
@@ -211,7 +201,6 @@ if st.session_state.pending_prompt:
             except Exception as e:
                 st.error(f"⚠️ خطأ: {str(e)}")
 
-# ======================= مربع الإدخال الرئيسي =======================
 prompt = st.chat_input("اكتب سؤالك الإبداعي هنا...", key="main_chat")
 if prompt:
     st.session_state.messages.append({"role": "user", "content": prompt})
