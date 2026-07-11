@@ -139,40 +139,37 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============================================================
-# الشريط العلوي (⊕ يسار | ☰ يمين)
+# الشريط العلوي (أزرار Streamlit حقيقية)
 # ============================================================
-st.markdown("""
-<div class="top-bar">
-    <button class="left-btn" onclick="location.reload()" title="محادثة جديدة">⊕</button>
-    <button class="right-btn" onclick="document.getElementById('menuOverlay').style.display='block'" title="المحادثات السابقة">☰</button>
-</div>
+col_left, col_mid, col_right = st.columns([1, 6, 1])
 
-<!-- نافذة منسدلة للمحادثات السابقة -->
-<div id="menuOverlay" style="display:none; position:fixed; top:55px; right:20px; background:white; border-radius:14px; padding:12px; z-index:1001; min-width:200px; box-shadow:0 8px 40px rgba(0,0,0,0.12); border:1px solid #e5e5e5;">
-    <div style="font-weight:600; margin-bottom:8px;">📋 المحادثات السابقة</div>
-    <div id="chatList"></div>
-    <button onclick="document.getElementById('menuOverlay').style.display='none'" style="margin-top:8px; background:#f0f0f0; border:none; border-radius:8px; padding:6px 12px; width:100%; cursor:pointer;">إغلاق</button>
-</div>
-""", unsafe_allow_html=True)
-
-# عرض المحادثات السابقة داخل المنسدلة (باستخدام ستريمليت)
-with st.sidebar:
-    st.markdown("### 📋 المحادثات")
-    if st.button("➕ محادثة جديدة", use_container_width=True):
+with col_left:
+    # زر ⊕ (محادثة جديدة)
+    if st.button("⊕", key="new_chat_btn", help="محادثة جديدة"):
         st.session_state.messages = [
             {"role": "system", "content": "أنت نبراس، صديق ذكي ودود، تجيب بأسلوب بسيط وواضح."},
             {"role": "assistant", "content": "مرحباً، أنا نبراس. كيف يمكنني مساعدتك؟"}
         ]
         st.rerun()
-    st.markdown("---")
-    if st.session_state.chat_history:
-        for i, chat in enumerate(st.session_state.chat_history[::-1]):
-            if st.button(f"💬 محادثة {i+1}", key=f"side_{i}", use_container_width=True):
-                st.session_state.messages = chat
-                st.rerun()
-    else:
-        st.info("لا توجد محادثات سابقة")
-st.sidebar.empty()  # لإخفاء الشريط الجانبي (يبقى فقط للقائمة)
+
+with col_right:
+    # زر ☰ (المحادثات السابقة) - يفتح popover
+    with st.popover("☰"):
+        st.markdown("### 📋 المحادثات السابقة")
+        if st.button("➕ محادثة جديدة", use_container_width=True):
+            st.session_state.messages = [
+                {"role": "system", "content": "أنت نبراس، صديق ذكي ودود، تجيب بأسلوب بسيط وواضح."},
+                {"role": "assistant", "content": "مرحباً، أنا نبراس. كيف يمكنني مساعدتك؟"}
+            ]
+            st.rerun()
+        st.markdown("---")
+        if st.session_state.chat_history:
+            for i, chat in enumerate(st.session_state.chat_history[::-1]):
+                if st.button(f"💬 محادثة {i+1}", key=f"pop_{i}", use_container_width=True):
+                    st.session_state.messages = chat
+                    st.rerun()
+        else:
+            st.info("لا توجد محادثات سابقة")
 
 # ============================================================
 # عرض المحادثة
