@@ -15,45 +15,30 @@ client = OpenAI(api_key=API_KEY)
 # ===== تهيئة الجلسة =====
 if "messages" not in st.session_state:
     st.session_state.messages = []
-if "pending_action" not in st.session_state:
-    st.session_state.pending_action = None
-if "processed" not in st.session_state:
-    st.session_state.processed = False
+if "waiting_for_response" not in st.session_state:
+    st.session_state.waiting_for_response = False
 
 def get_time():
     return time.strftime("%I:%M %p")
 
 def add_user_message(text):
-    """إضافة رسالة المستخدم وطلب الرد"""
+    """إضافة رسالة المستخدم وطلب رد واحد فقط"""
     st.session_state.messages.append({"role": "user", "content": text})
-    st.session_state.processed = False
+    st.session_state.waiting_for_response = True
     st.rerun()
 
 def clear_chat():
     st.session_state.messages = []
-    st.session_state.pending_action = None
-    st.session_state.processed = False
+    st.session_state.waiting_for_response = False
     st.rerun()
 
-# ===== CSS =====
 st.markdown("""
 <style>
 #MainMenu, footer, header { visibility: hidden; }
 .stApp { background: #f5f7fa; }
 .chat-container { max-width: 750px; margin: 80px auto 100px; padding: 0 20px; }
-.msg-user {
-    padding: 12px 18px; margin: 6px 0 6px auto; background: #e9ecef;
-    border-radius: 20px 20px 4px 20px; max-width: 75%; width: fit-content;
-    animation: slideInRight 0.3s ease;
-}
-.msg-bot {
-    padding: 12px 18px; margin: 6px auto 6px 0; background: #ffffff;
-    border-radius: 20px 20px 20px 4px; max-width: 75%; width: fit-content;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
-    animation: slideInLeft 0.3s ease;
-}
-@keyframes slideInRight { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
-@keyframes slideInLeft { from { opacity:0; transform:translateX(-20px); } to { opacity:1; transform:translateX(0); } }
+.msg-user { padding: 12px 18px; margin: 6px 0 6px auto; background: #e9ecef; border-radius: 20px 20px 4px 20px; max-width: 75%; width: fit-content; }
+.msg-bot { padding: 12px 18px; margin: 6px auto 6px 0; background: #ffffff; border-radius: 20px 20px 20px 4px; max-width: 75%; width: fit-content; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
 .time-badge { font-size: 10px; color: #aaa; margin-top: 4px; display: block; }
 .top-bar {
     position: fixed; top: 0; left: 0; right: 0;
@@ -69,15 +54,13 @@ st.markdown("""
     padding: 8px 20px; border-radius: 30px; font-size: 14px;
     cursor: pointer; transition: 0.2s; font-weight: 500;
 }
-.top-bar .new-chat-btn:hover { background: #333; transform: scale(1.02); }
 .category-grid { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin: 10px 0 20px 0; }
 .category-btn {
     background: white; border: 1px solid #e5e5e5; padding: 10px 24px;
     border-radius: 40px; font-size: 14px; cursor: pointer; transition: 0.3s;
-    color: #1a1a1a; box-shadow: 0 2px 8px rgba(0,0,0,0.02); flex: 1;
-    min-width: 120px; text-align: center; font-weight: 500;
+    color: #1a1a1a; flex: 1; min-width: 120px; text-align: center;
 }
-.category-btn:hover { background: #1a1a1a; color: white; border-color: #1a1a1a; transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+.category-btn:hover { background: #1a1a1a; color: white; }
 .stChatInput {
     border-radius: 40px !important; border: 1px solid rgba(0,0,0,0.04) !important;
     background: rgba(255,255,255,0.9) !important; backdrop-filter: blur(10px) !important;
@@ -91,7 +74,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ===== الشريط العلوي =====
 st.markdown("""
 <div class="top-bar">
     <div class="brand"><span>⚡</span> نبراس</div>
@@ -99,7 +81,6 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ===== عرض المحادثة =====
 st.markdown('<div class="chat-container">', unsafe_allow_html=True)
 for msg in st.session_state.messages:
     if msg["role"] == "user":
@@ -131,33 +112,34 @@ selected = st.selectbox("⚡ اختر خدمة سريعة:", quick_options, inde
 if selected:
     add_user_message(selected)
 
-# ===== معالجة الردود (مرة واحدة فقط) =====
-if st.session_state.messages and st.session_state.messages[-1]["role"] == "user" and not st.session_state.processed:
-    st.session_state.processed = True
+# ===== مربع الكتابة =====
+prompt = st.chat_input("اكتب سؤالك هنا...", key="main_chat")
+if prompt:
+    add_user_message(prompt)
+
+# ===== معالجة الرد (مرة واحدة فقط) =====
+if st.session_state.waiting_for_response and st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
+    st.session_state.waiting_for_response = False
     with st.spinner("نبراس يفكر..."):
         try:
             last_msg = st.session_state.messages[-1]["content"].lower()
-            system_prompt = "أنت نبراس، مساعد ذكي ومبدع، تجيب باختصار ووضوح."
+            system_prompt = "أنت نبراس، مساعد ذكي ومختصر، تجيب في حدود 3 جمل."
             if "إبداع" in last_msg or "فكرة" in last_msg:
-                system_prompt = "أنت نبراس، خبير إبداعي، تقدم أفكاراً مبتكرة وملهمة."
+                system_prompt = "أنت نبراس، خبير إبداعي، تقدم فكرة واحدة ملهمة."
             elif "شرح" in last_msg or "درس" in last_msg:
-                system_prompt = "أنت نبراس، معلم خبير، تشرح الدروس بأسلوب مبسط."
-            elif "احتراف" in last_msg or "سيرة" in last_msg:
-                system_prompt = "أنت نبراس، مستشار محترف، تقدم ردوداً مهنية."
+                system_prompt = "أنت نبراس، معلم، تشرح الدرس في 3 نقاط."
+            elif "بحث" in last_msg:
+                system_prompt = "أنت نبراس، باحث، تقدم ملخصاً مختصراً."
 
             response = client.responses.create(
                 model="gpt-4o-mini",
                 input=[{"role": "system", "content": system_prompt}] + st.session_state.messages,
                 tools=[{"type": "web_search"}],
-                max_output_tokens=500
+                max_output_tokens=300
             )
             reply = response.output_text
             st.session_state.messages.append({"role": "assistant", "content": reply})
             st.rerun()
         except Exception as e:
             st.error(f"⚠️ خطأ: {str(e)}")
-
-# ===== مربع الكتابة =====
-prompt = st.chat_input("اكتب سؤالك هنا...", key="main_chat")
-if prompt:
-    add_user_message(prompt)
+            st.session_state.waiting_for_response = False
