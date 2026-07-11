@@ -2,7 +2,6 @@ import streamlit as st
 from openai import OpenAI
 import os
 import time
-import random
 import base64
 
 st.set_page_config(page_title="نبراس", page_icon="⚡", layout="wide", initial_sidebar_state="collapsed")
@@ -13,16 +12,30 @@ if not API_KEY:
     st.stop()
 client = OpenAI(api_key=API_KEY)
 
+# ===== تهيئة الجلسة =====
 if "messages" not in st.session_state:
     st.session_state.messages = []
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
-if "last_selected" not in st.session_state:
-    st.session_state.last_selected = None
+if "pending_action" not in st.session_state:
+    st.session_state.pending_action = None
+if "processed" not in st.session_state:
+    st.session_state.processed = False
 
 def get_time():
     return time.strftime("%I:%M %p")
 
+def add_user_message(text):
+    """إضافة رسالة المستخدم وطلب الرد"""
+    st.session_state.messages.append({"role": "user", "content": text})
+    st.session_state.processed = False
+    st.rerun()
+
+def clear_chat():
+    st.session_state.messages = []
+    st.session_state.pending_action = None
+    st.session_state.processed = False
+    st.rerun()
+
+# ===== CSS =====
 st.markdown("""
 <style>
 #MainMenu, footer, header { visibility: hidden; }
@@ -78,6 +91,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# ===== الشريط العلوي =====
 st.markdown("""
 <div class="top-bar">
     <div class="brand"><span>⚡</span> نبراس</div>
@@ -85,6 +99,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# ===== عرض المحادثة =====
 st.markdown('<div class="chat-container">', unsafe_allow_html=True)
 for msg in st.session_state.messages:
     if msg["role"] == "user":
@@ -93,43 +108,41 @@ for msg in st.session_state.messages:
         st.markdown(f'<div class="msg-bot">{msg["content"]}<span class="time-badge">{get_time()}</span></div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ===== أزرار الفئات السريعة =====
+# ===== أزرار الفئات =====
 col1, col2, col3 = st.columns(3)
 with col1:
     if st.button("🤖 إبداع", key="cat_ai", use_container_width=True):
-        st.session_state.messages.append({"role": "user", "content": "أريد فكرة إبداعية"})
-        st.rerun()
+        add_user_message("أريد فكرة إبداعية")
 with col2:
     if st.button("📚 تعلم", key="cat_learn", use_container_width=True):
-        st.session_state.messages.append({"role": "user", "content": "أريد شرح درس"})
-        st.rerun()
+        add_user_message("أريد شرح درس")
 with col3:
     if st.button("💼 محترف", key="cat_pro", use_container_width=True):
-        st.session_state.messages.append({"role": "user", "content": "أريد رداً احترافياً"})
-        st.rerun()
+        add_user_message("أريد رداً احترافياً")
 
-# ===== القائمة المنسدلة (تستدعي الذكاء الاصطناعي) =====
+# ===== القائمة المنسدلة =====
 quick_options = [
     "📝 تلخيص نص", "💡 فكرة مشروع", "📚 شرح درس", "🧠 حل مسألة",
     "✍️ كتابة مقال", "🌍 ترجمة", "🔍 بحث", "📊 تحليل",
-    "🎨 تصميم", "📖 تعريف", "🗺️ خطة", "💼 سيرة ذاتية",
-    "📧 بريد إلكتروني", "🎤 خطاب", "📝 مراجعة", "🧩 لغز",
-    "📈 توقع", "🛠️ حل مشكلة", "🎯 نصائح", "📋 مهام"
+    "🎨 تصميم", "📖 تعريف", "🗺️ خطة", "💼 سيرة ذاتية"
 ]
 
 selected = st.selectbox("⚡ اختر خدمة سريعة:", quick_options, index=None, placeholder="📌 اختر من القائمة...")
+if selected:
+    add_user_message(selected)
 
-if selected and selected != st.session_state.last_selected:
-    st.session_state.last_selected = selected
-    st.session_state.messages.append({"role": "user", "content": selected})
+# ===== معالجة الردود (مرة واحدة فقط) =====
+if st.session_state.messages and st.session_state.messages[-1]["role"] == "user" and not st.session_state.processed:
+    st.session_state.processed = True
     with st.spinner("نبراس يفكر..."):
         try:
-            system_prompt = "أنت نبراس، مساعد ذكي ومبدع."
-            if "إبداع" in selected or "فكرة" in selected or "تصميم" in selected:
-                system_prompt = "أنت نبراس، خبير إبداعي، تقدم أفكاراً مبتكرة."
-            elif "شرح" in selected or "تعريف" in selected or "درس" in selected:
+            last_msg = st.session_state.messages[-1]["content"].lower()
+            system_prompt = "أنت نبراس، مساعد ذكي ومبدع، تجيب باختصار ووضوح."
+            if "إبداع" in last_msg or "فكرة" in last_msg:
+                system_prompt = "أنت نبراس، خبير إبداعي، تقدم أفكاراً مبتكرة وملهمة."
+            elif "شرح" in last_msg or "درس" in last_msg:
                 system_prompt = "أنت نبراس، معلم خبير، تشرح الدروس بأسلوب مبسط."
-            elif "احتراف" in selected or "سيرة" in selected or "بريد" in selected:
+            elif "احتراف" in last_msg or "سيرة" in last_msg:
                 system_prompt = "أنت نبراس، مستشار محترف، تقدم ردوداً مهنية."
 
             response = client.responses.create(
@@ -147,18 +160,4 @@ if selected and selected != st.session_state.last_selected:
 # ===== مربع الكتابة =====
 prompt = st.chat_input("اكتب سؤالك هنا...", key="main_chat")
 if prompt:
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("assistant"):
-        with st.spinner("نبراس يفكر..."):
-            try:
-                response = client.responses.create(
-                    model="gpt-4o-mini",
-                    input=st.session_state.messages,
-                    tools=[{"type": "web_search"}],
-                    max_output_tokens=500
-                )
-                reply = response.output_text
-                st.session_state.messages.append({"role": "assistant", "content": reply})
-                st.rerun()
-            except Exception as e:
-                st.error(f"⚠️ {str(e)}")
+    add_user_message(prompt)
