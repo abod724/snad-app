@@ -1,79 +1,153 @@
 import streamlit as st
 from openai import OpenAI
-import os
-import time
 
-st.set_page_config(page_title="نبراس", page_icon="⚡", layout="centered")
+# ─── إعدادات الصفحة ───
+st.set_page_config(
+    page_title="نبراس - المساعد الذكي",
+    page_icon="🤖",
+    layout="centered",
+    initial_sidebar_state="collapsed"
+)
 
+# ─── استدعاء المفتاح من صندوق الأسرار ───
 API_KEY = st.secrets.get("OPENAI_API_KEY")
-if not API_KEY:
-    st.warning("🔑 أضف مفتاح OpenAI في الأسرار (secrets).")
-    API_KEY = st.text_input("أدخل مفتاح OpenAI مؤقتاً:", type="password")
-    if not API_KEY:
-        st.stop()
-    client = OpenAI(api_key=API_KEY)
-else:
-    client = OpenAI(api_key=API_KEY)
 
+if not API_KEY:
+    st.error("🔴 مفتاح OpenAI غير موجود! أضفه في ملف .streamlit/secrets.toml")
+    st.stop()
+
+# ─── التنسيق ───
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap');
+
+* { font-family: 'Tajawal', sans-serif; }
+
+.main { background-color: #0e1117; }
+
+.stChatMessage { border-radius: 16px; margin-bottom: 8px; }
+
+[data-testid="stChatMessageContent"] {
+    font-size: 16px;
+    line-height: 1.8;
+}
+
+.title-container {
+    text-align: center;
+    padding: 2rem 0 1rem;
+}
+
+.title-container h1 {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-size: 2.5rem;
+    font-weight: 700;
+}
+
+.title-container p {
+    color: #8899a6;
+    font-size: 1.1rem;
+}
+
+.sidebar .stTextInput > div > div > input {
+    direction: ltr;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ─── الشريط الجانبي ───
+with st.sidebar:
+    st.header("⚙️ الإعدادات")
+    
+    model = st.selectbox(
+        "🧠 النموذج",
+        ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"],
+        index=0
+    )
+    
+    temperature = st.slider(
+        "🌡️ درجة الإبداع",
+        min_value=0.0,
+        max_value=2.0,
+        value=0.7,
+        step=0.1,
+        help="قيمة أعلى = ردود أكثر إبداعاً"
+    )
+    
+    system_prompt = st.text_area(
+        "📝 شخصية المساعد",
+        value="أنت نبراس، مساعد ذكي احترافي ودود. تجيب باللغة العربية بشكل واضح ومفصل ومنظم. استخدم الإيموجي عند الحاجة.",
+        height=120
+    )
+    
+    st.divider()
+    
+    if st.button("🗑️ مسح المحادثة", use_container_width=True, type="secondary"):
+        st.session_state.messages = []
+        st.rerun()
+    
+    st.divider()
+    st.caption("صنع بـ ❤️ باستخدام Streamlit + OpenAI")
+
+# ─── العنوان ───
+st.markdown("""
+<div class="title-container">
+    <h1>🤖 نبراس</h1>
+    <p>مدعوم بتقنية ChatGPT - اسألني أي شيء</p>
+</div>
+""", unsafe_allow_html=True)
+
+# ─── تهيئة المحادثة ───
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-def get_time():
-    return time.strftime("%I:%M %p")
+# ─── عرض الرسائل السابقة ───
+for message in st.session_state.messages:
+    with st.chat_message(message["role"], avatar="🧑" if message["role"] == "user" else "🤖"):
+        st.markdown(message["content"])
 
-# ===== الشريط العلوي =====
-col1, col2, col3 = st.columns([1, 8, 1])
-with col1:
-    if st.button("➕", help="محادثة جديدة"):
-        st.session_state.messages = []
-        st.rerun()
-with col2:
-    st.markdown('<div style="text-align:center; font-weight:600; font-size:20px;">⚡ نبراس</div>', unsafe_allow_html=True)
-with col3:
-    with st.popover("☰"):
-        st.markdown("### 📋 القائمة")
-        if st.button("🗑️ مسح المحادثة", use_container_width=True):
-            st.session_state.messages = []
-            st.rerun()
-        st.info(f"📊 عدد الرسائل: {len(st.session_state.messages)}")
-
-# ===== نص الترحيب =====
+# ─── رسالة ترحيب ───
 if not st.session_state.messages:
-    st.markdown("""
-    <div style="text-align:center; padding:40px 0;">
-        <h2>👋 أنا نبراس</h2>
-        <p style="color:#6b7280; font-size:18px;">كيف يمكنني مساعدتك؟</p>
-    </div>
-    """, unsafe_allow_html=True)
+    with st.chat_message("assistant", avatar="🤖"):
+        st.markdown("مرحباً! 👋 أنا نبراس، مساعدك الذكي. كيف أقدر أساعدك اليوم؟")
 
-# ===== عرض المحادثة =====
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.write(msg["content"])
-        st.caption(get_time())
-
-# ===== مربع الكتابة =====
-prompt = st.chat_input("اكتب سؤالك هنا...")
-
-if prompt:
+# ─── إدخال المستخدم ───
+if prompt := st.chat_input("اكتب رسالتك هنا..."):
+    
+    # إضافة رسالة المستخدم
     st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.write(prompt)
-        st.caption(get_time())
-
-    with st.chat_message("assistant"):
-        with st.spinner("نبراس يفكر..."):
-            try:
-                response = client.responses.create(
-                    model="gpt-4o-mini",
-                    input=[{"role": "system", "content": "أنت نبراس، مساعد ذكي ومختصر."}] + st.session_state.messages,
-                    tools=[{"type": "web_search"}],
-                    max_output_tokens=400
-                )
-                reply = response.output_text
-                st.write(reply)
-                st.caption(get_time())
-                st.session_state.messages.append({"role": "assistant", "content": reply})
-                st.rerun()
-            except Exception as e:
-                st.error(f"⚠️ {str(e)}")
+    with st.chat_message("user", avatar="🧑"):
+        st.markdown(prompt)
+    
+    # توليد الرد
+    with st.chat_message("assistant", avatar="🤖"):
+        try:
+            client = OpenAI(api_key=API_KEY)
+            
+            messages_for_api = [{"role": "system", "content": system_prompt}]
+            messages_for_api.extend(st.session_state.messages)
+            
+            # Streaming response
+            stream = client.chat.completions.create(
+                model=model,
+                messages=messages_for_api,
+                temperature=temperature,
+                stream=True,
+                max_tokens=4096
+            )
+            
+            response = st.write_stream(stream)
+            
+            st.session_state.messages.append({"role": "assistant", "content": response})
+            
+        except Exception as e:
+            error_msg = str(e)
+            if "api_key" in error_msg.lower() or "auth" in error_msg.lower():
+                st.error("❌ مفتاح API غير صالح. تأكد من صحة المفتاح في ملف الأسرار.")
+            elif "rate_limit" in error_msg.lower():
+                st.error("⏳ تم تجاوز حد الاستخدام. انتظر قليلاً وحاول مجدداً.")
+            elif "model" in error_msg.lower():
+                st.error(f"❌ النموذج '{model}' غير متاح في حسابك. جرب نموذج آخر.")
+            else:
+                st.error(f"❌ حصل خطأ: {error_msg}")
