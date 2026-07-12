@@ -1,185 +1,108 @@
-"""
-🤖 نبراس - المساعد الذكي
-بحث قوقل + صور + تصميم أبيض نظيف
-"""
 import streamlit as st
 from openai import OpenAI
 from googlesearch import search as google_search
 import base64
 
-st.set_page_config(
-    page_title="نبراس - المساعد الذكي",
-    page_icon="🤖",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+st.set_page_config(page_title="نبراس", page_icon="🤖", layout="wide")
 
 API_KEY = st.secrets.get("OPENAI_API_KEY")
 if not API_KEY:
-    st.error("🔴 مفتاح OpenAI غير موجود! أضفه في ملف .streamlit/secrets.toml")
+    st.error("🔴 مفتاح OpenAI غير موجود")
     st.stop()
 
-# ─── CSS ───
+# ─── CSS بسيط ───
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap');
-* { font-family: 'IBM Plex Sans Arabic', sans-serif; }
-.stApp { background: #ffffff; color: #0d0d0d; }
 #MainMenu, footer, header { visibility: hidden; }
-section[data-testid="stSidebar"] { background: #f9f9f9; border-left: 1px solid #e5e5e5; }
-[data-testid="stChatMessage"] { background: transparent; border: none; border-radius: 0; padding: 8px 0; max-width: 760px; margin: 0 auto; }
-[data-testid="stChatMessageContent"] { color: #0d0d0d; font-size: 16px; line-height: 1.75; }
-[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) { background: #f7f7f8; border-radius: 12px; padding: 14px 18px; margin: 6px auto; }
-[data-testid="stChatInput"] { max-width: 760px; margin: 0 auto; border-radius: 28px; border: 1px solid #e5e5e5; background: #ffffff; box-shadow: 0 2px 12px rgba(0,0,0,0.05); }
-[data-testid="stChatInput"]:focus-within { border-color: #0d0d0d; box-shadow: 0 2px 16px rgba(0,0,0,0.08); }
-.stButton > button { border-radius: 10px; border: 1px solid #e5e5e5; background: #ffffff; color: #0d0d0d; font-weight: 500; transition: all 0.15s; }
-.stButton > button:hover { background: #f7f7f8; border-color: #d0d0d0; }
-.source-link { display: inline-block; background: #f7f7f8; color: #2563eb; border: 1px solid #e5e5e5; border-radius: 8px; padding: 3px 12px; margin: 3px 2px; font-size: 0.82rem; text-decoration: none; transition: all 0.15s; }
-.source-link:hover { background: #eff6ff; border-color: #2563eb; }
-.brand { text-align: center; padding: 1rem 0 0.5rem; }
-.brand h1 { font-size: 1.6rem; font-weight: 700; color: #0d0d0d; margin: 0; }
-.brand p { color: #8e8e8e; font-size: 0.88rem; margin-top: 0.2rem; }
-.divider { border: none; border-top: 1px solid #f0f0f0; margin: 0.5rem 0; }
+.stApp { background: #ffffff; }
+[data-testid="stChatMessage"] { max-width: 760px; margin: 0 auto; padding: 8px 0; }
+[data-testid="stChatMessageContent"] { font-size: 16px; line-height: 1.75; }
+[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) { background: #f7f7f8; border-radius: 12px; padding: 14px 18px; }
 </style>
 """, unsafe_allow_html=True)
 
 # ─── الشريط الجانبي ───
 with st.sidebar:
-    if st.button("➕ محادثة جديدة", use_container_width=True, type="primary"):
+    if st.button("➕ محادثة جديدة", use_container_width=True):
         st.session_state.messages = []
         st.session_state.sources = []
         st.rerun()
-
-    st.markdown("<hr class='divider'>", unsafe_allow_html=True)
-
-    model = st.selectbox("🧠 النموذج", ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"])
-    temperature = st.slider("🌡️ الإبداع", 0.0, 2.0, 0.7, 0.1)
-
-    st.markdown("<hr class='divider'>", unsafe_allow_html=True)
-
-    with st.expander("☰ القائمة"):
-        web_search = st.toggle("🌐 بحث قوقل", value=True)
-        search_count = st.slider("عدد النتائج", 3, 10, 5, key="sc")
-        system_prompt = st.text_area(
-            "شخصية المساعد",
-            value="أنت نبراس، مساعد ذكي احترافي تجيب بالعربية بوضوح. عند توفّر نتائج بحث استخدمها كمرجع واذكر المصادر بأرقام [1].",
-            height=90
-        )
-        if st.button("🗑️ مسح المحادثة", use_container_width=True):
-            st.session_state.messages = []
-            st.session_state.sources = []
-            st.rerun()
-
-    st.caption(f"💬 الرسائل: {len(st.session_state.get('messages', []))}")
+    
+    model = st.selectbox("النموذج", ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"])
+    temperature = st.slider("الإبداع", 0.0, 2.0, 0.7, 0.1)
+    web_search = st.toggle("بحث قوقل", value=True)
+    system_prompt = st.text_area("تعليمات النظام", value="أنت نبراس، مساعد ذكي محترف.", height=80)
 
 # ─── دوال مساعدة ───
-def search_google(query, max_results=5):
+def search_google(query):
     try:
-        results = list(google_search(query, num_results=max_results, advanced=True))
+        results = list(google_search(query, num_results=3, advanced=True))
         if not results:
             return None, []
-        context_parts, sources = [], []
+        context, sources = [], []
         for i, r in enumerate(results, 1):
-            title = getattr(r, "title", "")
-            desc = getattr(r, "description", "")
-            url = getattr(r, "url", str(r))
-            context_parts.append(f"[{i}] {title}\n{desc}\nالرابط: {url}")
-            sources.append({"title": title, "url": url})
-        return "\n\n".join(context_parts), sources
-    except Exception:
+            context.append(f"[{i}] {getattr(r,'title','')}\n{getattr(r,'description','')}\nالرابط: {getattr(r,'url','')}")
+            sources.append({"title": getattr(r,'title',''), "url": getattr(r,'url','')})
+        return "\n\n".join(context), sources
+    except:
         return None, []
 
-def image_to_base64(uploaded_file):
-    return base64.b64encode(uploaded_file.getvalue()).decode("utf-8")
+def image_to_base64(file):
+    return base64.b64encode(file.getvalue()).decode()
 
-# ─── الشعار ───
-st.markdown("""
-<div class="brand">
-    <h1>🤖 نبراس</h1>
-    <p>اسألني أي شيء</p>
-</div>
-""", unsafe_allow_html=True)
-
-# ─── تهيئة المحادثة ───
+# ─── تهيئة الجلسة ───
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "sources" not in st.session_state:
     st.session_state.sources = []
-if "pending_prompt" not in st.session_state:
-    st.session_state.pending_prompt = ""
 
-# ─── عرض الرسائل السابقة ───
-for idx, msg in enumerate(st.session_state.messages):
-    avatar = "🧑" if msg["role"] == "user" else "🤖"
-    with st.chat_message(msg["role"], avatar=avatar):
+# ─── عرض المحادثة ───
+for i, msg in enumerate(st.session_state.messages):
+    with st.chat_message(msg["role"], avatar="🧑" if msg["role"] == "user" else "🤖"):
         st.markdown(msg["content"])
-        if msg["role"] == "assistant" and idx < len(st.session_state.sources) and st.session_state.sources[idx]:
-            links = "".join(
-                f'<a class="source-link" href__="{s["url"]}" target="_blank">🔗 {s["title"][:45]}</a>'
-                for s in st.session_state.sources[idx]
-            )
-            st.markdown(f"**📎 المصادر:**<br>{links}", unsafe_allow_html=True)
+        if msg["role"] == "assistant" and i < len(st.session_state.sources) and st.session_state.sources[i]:
+            links = "".join(f'<a href__="{s["url"]}" target="_blank" style="margin:2px;display:inline-block;background:#f0f0f0;padding:2px 10px;border-radius:6px;font-size:13px;color:#2563eb;text-decoration:none;">🔗 {s["title"][:40]}</a>' for s in st.session_state.sources[i])
+            st.markdown(f"**المصادر:**<br>{links}", unsafe_allow_html=True)
 
-# ─── شاشة ترحيب ───
+# ─── ترحيب ───
 if not st.session_state.messages:
     with st.chat_message("assistant", avatar="🤖"):
-        st.markdown("أهلاً 👋 كيف أقدر أساعدك؟")
-
-    suggestions = ["📰 آخر الأخبار", "📈 أسعار الأسهم", "⚽ نتائج المباريات", "💡 اكتب لي كود"]
-    cols = st.columns(len(suggestions))
-    for i, s in enumerate(suggestions):
-        with cols[i]:
-            if st.button(s, key=f"s{i}", use_container_width=True):
-                st.session_state.pending_prompt = s
-
-# ─── رفع صورة ───
-uploaded_image = st.file_uploader("📷 رفع صورة", type=["png", "jpg", "jpeg"], key="img")
+        st.markdown("أهلاً 👋 أنا نبراس، كيف أساعدك؟")
 
 # ─── الإدخال ───
-prompt = st.chat_input("اكتب رسالتك هنا...")
+uploaded_image = st.file_uploader("📷", type=["png", "jpg", "jpeg"], label_visibility="collapsed", key="img")
+prompt = st.chat_input("اكتب رسالتك...")
 
-if st.session_state.pending_prompt:
-    prompt = st.session_state.pending_prompt
-    st.session_state.pending_prompt = ""
-
-# ─── معالجة الرد ───
-if prompt or uploaded_image:
-
-    if not API_KEY:
-        st.error("🔴 مفتاح OpenAI غير موجود!")
-        st.stop()
-
-    user_text = prompt or "اشرح هذه الصورة"
-
+if prompt:
+    user_text = prompt
+    if uploaded_image:
+        user_text = prompt or "اشرح هذه الصورة"
+    
     # ─── عرض رسالة المستخدم ───
     with st.chat_message("user", avatar="🧑"):
         st.markdown(user_text)
-
+    
     # ─── حفظ رسالة المستخدم ───
     st.session_state.messages.append({"role": "user", "content": user_text})
-
+    
     # ─── رد المساعد ───
     with st.chat_message("assistant", avatar="🤖"):
         try:
             client = OpenAI(api_key=API_KEY)
-
-            search_context = None
-            sources = []
+            
+            # بحث
+            search_context, sources = None, []
             if web_search and not uploaded_image:
-                with st.spinner("🌐 أبحث في قوقل..."):
-                    search_context, sources = search_google(user_text, search_count)
-
-            messages_for_api = [{"role": "system", "content": system_prompt}]
-
+                search_context, sources = search_google(user_text)
+            
+            # بناء الرسائل
+            msgs = [{"role": "system", "content": system_prompt}]
             if search_context:
-                messages_for_api.append({
-                    "role": "system",
-                    "content": f"نتائج بحث قوقل:\n{search_context}\n\nاستخدمها كمرجع واستشهد بالمصادر [1] [2]."
-                })
-
+                msgs.append({"role": "system", "content": f"نتائج البحث:\n{search_context}"})
+            
             if uploaded_image:
                 b64 = image_to_base64(uploaded_image)
-                messages_for_api.append({
+                msgs.append({
                     "role": "user",
                     "content": [
                         {"type": "text", "text": user_text},
@@ -187,36 +110,30 @@ if prompt or uploaded_image:
                     ]
                 })
             else:
-                messages_for_api.extend(st.session_state.messages[-10:])
-
+                msgs.extend(st.session_state.messages[-8:])
+            
+            # ─── Streaming ───
             stream = client.chat.completions.create(
                 model=model,
-                messages=messages_for_api,
+                messages=msgs,
                 temperature=temperature,
                 stream=True,
-                max_tokens=4096
+                max_tokens=2048
             )
-
+            
+            # جمع الرد
             response = st.write_stream(stream)
-
+            
+            # حفظ الرد والمصادر
             st.session_state.messages.append({"role": "assistant", "content": response})
-
             while len(st.session_state.sources) < len(st.session_state.messages):
                 st.session_state.sources.append([])
-            st.session_state.sources[len(st.session_state.messages) - 1] = sources
-
+            st.session_state.sources[-1] = sources
+            
+            # عرض المصادر
             if sources:
-                links = "".join(
-                    f'<a class="source-link" href__="{s["url"]}" target="_blank">🔗 {s["title"][:45]}</a>'
-                    for s in sources
-                )
-                st.markdown(f"**📎 المصادر:**<br>{links}", unsafe_allow_html=True)
-
+                links = "".join(f'<a href__="{s["url"]}" target="_blank" style="margin:2px;display:inline-block;background:#f0f0f0;padding:2px 10px;border-radius:6px;font-size:13px;color:#2563eb;text-decoration:none;">🔗 {s["title"][:40]}</a>' for s in sources)
+                st.markdown(f"**المصادر:**<br>{links}", unsafe_allow_html=True)
+            
         except Exception as e:
-            err = str(e).lower()
-            if "api_key" in err:
-                st.error("❌ مفتاح API غير صالح")
-            elif "rate_limit" in err:
-                st.error("⏳ تجاوزت الحد، انتظر دقيقة")
-            else:
-                st.error(f"❌ {e}")
+            st.error(f"❌ {str(e)}")
