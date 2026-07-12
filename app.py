@@ -73,7 +73,7 @@ with st.sidebar:
     
     system_prompt = st.text_area(
         "📝 شخصية المساعد",
-        value="أنت نبراس، مساعد ذكي احترافي ودود. تجيب باللغة العربية بشكل واضح ومفصل ومنظم. استخدم الإيموجي عند الحاجة. ابحث في الويب إذا كان السؤال يحتاج معلومات حديثة.",
+        value="أنت نبراس، مساعد ذكي احترافي ودود. تجيب باللغة العربية بشكل واضح ومفصل ومنظم. استخدم الإيموجي عند الحاجة.",
         height=120
     )
     
@@ -121,24 +121,18 @@ if prompt := st.chat_input("اكتب رسالتك هنا..."):
             messages_for_api = [{"role": "system", "content": system_prompt}]
             messages_for_api.extend(st.session_state.messages)
             
-            # ─── استخدام Responses API مع بحث ويب و Streaming ───
-            stream = client.responses.create(
+            # ─── استخدام Chat Completions (بدون بحث ويب) ───
+            stream = client.chat.completions.create(
                 model=model,
-                input=messages_for_api,
-                tools=[{"type": "web_search"}],
+                messages=messages_for_api,
+                temperature=temperature,
                 stream=True,
-                max_output_tokens=4096,
-                temperature=temperature
+                max_tokens=4096
             )
             
-            # تجميع الرد من التدفق
-            full_response = ""
-            for chunk in stream:
-                if chunk.type == "response.output_text.delta":
-                    full_response += chunk.delta
-                    st.write(chunk.delta)  # عرض تدريجي
+            response = st.write_stream(stream)
             
-            st.session_state.messages.append({"role": "assistant", "content": full_response})
+            st.session_state.messages.append({"role": "assistant", "content": response})
             
         except Exception as e:
             error_msg = str(e)
