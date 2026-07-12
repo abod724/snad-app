@@ -82,9 +82,6 @@ with st.sidebar:
     if st.button("🗑️ مسح المحادثة", use_container_width=True, type="secondary"):
         st.session_state.messages = []
         st.rerun()
-    
-    st.divider()
-    # تم إزالة عبارة "صنع بـ ❤️"
 
 # ─── العنوان ───
 st.markdown("""
@@ -124,20 +121,24 @@ if prompt := st.chat_input("اكتب رسالتك هنا..."):
             messages_for_api = [{"role": "system", "content": system_prompt}]
             messages_for_api.extend(st.session_state.messages)
             
-            # ─── إضافة البحث في الويب ───
-            stream = client.chat.completions.create(
+            # ─── استخدام Responses API مع بحث ويب و Streaming ───
+            stream = client.responses.create(
                 model=model,
-                messages=messages_for_api,
-                temperature=temperature,
+                input=messages_for_api,
+                tools=[{"type": "web_search"}],
                 stream=True,
-                max_tokens=4096,
-                tools=[{"type": "web_search"}],  # ← تفعيل البحث في الويب
-                tool_choice="auto"  # ← يقرر النموذج متى يبحث
+                max_output_tokens=4096,
+                temperature=temperature
             )
             
-            response = st.write_stream(stream)
+            # تجميع الرد من التدفق
+            full_response = ""
+            for chunk in stream:
+                if chunk.type == "response.output_text.delta":
+                    full_response += chunk.delta
+                    st.write(chunk.delta)  # عرض تدريجي
             
-            st.session_state.messages.append({"role": "assistant", "content": response})
+            st.session_state.messages.append({"role": "assistant", "content": full_response})
             
         except Exception as e:
             error_msg = str(e)
