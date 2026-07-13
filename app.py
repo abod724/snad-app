@@ -46,9 +46,6 @@ if not API_KEY:
 
 client = OpenAI(api_key=API_KEY)
 
-def get_current_date():
-    return datetime.now().strftime("%A، %d %B %Y")
-
 top_col1, top_col2, top_col3 = st.columns([0.1, 0.8, 0.1])
 
 with top_col1:
@@ -108,6 +105,19 @@ for msg in st.session_state.messages:
 prompt = st.chat_input("اسأل Nabras")
 
 if prompt:
+
+    # ⭐ إصلاح التاريخ — حذف أي تاريخ قديم من الرسائل
+    st.session_state.messages = [
+        m for m in st.session_state.messages
+        if "اليوم" not in m["content"]
+        and "تاريخ" not in m["content"]
+        and "July" not in m["content"]
+        and "June" not in m["content"]
+        and "2026" not in m["content"]
+        and "2025" not in m["content"]
+        and "2024" not in m["content"]
+    ]
+
     st.session_state.messages.append({"role": "user", "content": prompt})
 
     with st.chat_message("user"):
@@ -115,22 +125,16 @@ if prompt:
 
     with st.chat_message("assistant"):
         try:
-            if "تاريخ" in prompt or "اليوم" in prompt:
-                reply = f"اليوم هو {get_current_date()}."
-                typewriter(reply)
-                st.session_state.messages.append({"role": "assistant", "content": reply})
-                st.stop()
-
-            with st.spinner("جاري التفكير..."):
+            with st.spinner("جاري البحث عن التاريخ الحقيقي..."):
                 response = client.responses.create(
                     model="gpt-4o-mini",
                     input=[
-                        {"role": "system", "content": "أنت مساعد نبراس الذكي. أجب بجمل قصيرة."},
+                        {"role": "system", "content": "استخدم البحث بالويب لجلب التاريخ الصحيح."},
                         *st.session_state.messages
                     ],
                     tools=[{"type": "web_search"}],
                     max_output_tokens=200,
-                    temperature=0.3
+                    temperature=0.2
                 )
 
                 reply = response.output_text
