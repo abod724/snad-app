@@ -2,3 +2,4 @@ streamlit
 openai
 googlesearch-python
 duckduckgo-search
+pytz
