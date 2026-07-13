@@ -55,14 +55,11 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("""
-<div class="input-icons">
-    <form action="" method="post">
-        <button class="icon-btn" name="voice">🎤</button>
-        <button class="icon-btn" name="upload">+</button>
-    </form>
-</div>
-""", unsafe_allow_html=True)
+icon_col1, icon_col2 = st.columns([0.1, 0.1])
+with icon_col1:
+    upload_image = st.file_uploader("", type=["png","jpg","jpeg"], label_visibility="collapsed")
+with icon_col2:
+    record_audio = st.audio_input("")
 
 st.set_page_config(page_title=" ", page_icon="", layout="wide")
 
@@ -132,13 +129,16 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
 
-uploaded_image = st.file_uploader("", type=["png", "jpg", "jpeg"], label_visibility="collapsed")
-
-if uploaded_image:
-    st.image(uploaded_image)
-    st.session_state.messages.append({"role": "user", "content": "📷 تم رفع صورة"})
+if upload_image:
+    st.image(upload_image)
+    st.session_state.messages.append({"role": "user", "content": "📷 صورة مرفوعة"})
     with st.chat_message("user"):
-        st.write("📷 تم رفع صورة")
+        st.write("📷 صورة مرفوعة")
+
+if record_audio:
+    st.session_state.messages.append({"role": "user", "content": "🎤 تم تسجيل صوت"})
+    with st.chat_message("user"):
+        st.write("🎤 تم تسجيل صوت")
 
 prompt = st.chat_input("اسأل Nabras")
 
