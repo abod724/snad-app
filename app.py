@@ -16,7 +16,7 @@ def typewriter(text):
 if "menu_open" not in st.session_state:
     st.session_state.menu_open = False
 
-# ─── تنسيقات عامة ───
+# ─── زر المنسدلة + زر محادثة جديدة ───
 st.markdown("""
 <style>
     [data-testid="stChatMessageAvatarUser"],
@@ -59,18 +59,7 @@ st.markdown("""
         opacity: 1;
     }
 
-    /* زر ≡ */
-    .menu-btn {
-        padding: 6px 10px;
-        font-size: 20px;
-        background-color: #f0f0f0;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-    }
-
-    /* زر + */
-    .new-chat-btn {
+    .menu-btn, .new-chat-btn {
         padding: 6px 10px;
         font-size: 20px;
         background-color: #f0f0f0;
@@ -79,22 +68,22 @@ st.markdown("""
         cursor: pointer;
     }
 </style>
-
-<!-- زر المنسدلة (≡) -->
-<div style="position: fixed; top: 10px; right: 10px; z-index: 9999;">
-    <button class="menu-btn" onclick="fetch('/toggle_menu')">≡</button>
-</div>
-
-<!-- زر محادثة جديدة (+) -->
-<div style="position: fixed; top: 10px; left: 10px; z-index: 9999;">
-    <button class="new-chat-btn" onclick="location.reload()">+</button>
-</div>
 """, unsafe_allow_html=True)
 
-# نقطة نهاية لتغيير حالة القائمة
-st.experimental_connection("toggle_menu", lambda: st.session_state.update(menu_open=not st.session_state.menu_open))
+# ─── أزرار Streamlit الحقيقية ───
+col1, col2 = st.columns([0.1, 0.9])
 
-# ─── القائمة المنسدلة مع حركة الانزلاق ───
+with col1:
+    if st.button("≡"):
+        st.session_state.menu_open = not st.session_state.menu_open
+
+with col2:
+    if st.button("+"):
+        st.session_state.messages = []
+        st.session_state.menu_open = False
+        st.rerun()
+
+# ─── القائمة المنسدلة ───
 menu_class = "menu-box show" if st.session_state.menu_open else "menu-box"
 
 st.markdown(f"""
