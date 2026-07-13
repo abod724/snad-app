@@ -2,27 +2,27 @@ import streamlit as st
 from openai import OpenAI
 from datetime import datetime
 
-# ─── CSS: إخفاء الأيقونات والمسافات الزائدة ───
+# ─── إخفاء الأيقونات عبر data-testid (يعمل في كل الإصدارات) ───
 st.markdown("""
 <style>
-    /* إخفاء أيقونات المستخدم والمساعد */
-    .stChatMessageAvatar {
+    /* إخفاء أيقونات المستخدم والمساعد نهائياً */
+    [data-testid="stChatMessageAvatar"] {
         display: none !important;
     }
     /* تقليل المسافات بين الرسائل */
     .stChatMessage {
         gap: 0px !important;
-        margin: 4px 0 !important;
+        margin: 2px 0 !important;
     }
     /* خلفية بيضاء */
     .stApp {
         background: white !important;
     }
-    /* إخفاء الهيدر والفوتر */
+    /* إخفاء الهيدر والفوتر فقط (يبقي الشريط الجانبي) */
     header, footer {
         visibility: hidden !important;
     }
-    /* جعل الخطوط واضحة */
+    /* جعل النص واضحاً */
     .stChatMessageContent {
         font-size: 15px !important;
         line-height: 1.6 !important;
@@ -31,7 +31,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.set_page_config(
-    page_title=" ",          # ← لا شيء يظهر
+    page_title=" ",          # ← لا شيء يظهر في شريط المتصفح
     page_icon="",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -47,7 +47,7 @@ client = OpenAI(api_key=API_KEY)
 def get_current_date():
     return datetime.now().strftime("%A، %d %B %Y")
 
-# ─── الشريط الجانبي (الإعدادات فقط) ───
+# ─── الشريط الجانبي (المنسدلة) ───
 with st.sidebar:
     st.markdown("### ⚙️ الإعدادات")
     if st.button("➕ محادثة جديدة", use_container_width=True):
@@ -87,7 +87,7 @@ if prompt := st.chat_input("اكتب سؤالك..."):
                 st.session_state.messages.append({"role": "assistant", "content": reply})
                 st.stop()
 
-            # ─── البحث بالويب (كما هو ممتاز) ───
+            # ─── البحث بالويب ───
             with st.spinner("جاري التفكير..."):
                 response = client.responses.create(
                     model="gpt-4o-mini",
