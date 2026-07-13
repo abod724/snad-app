@@ -4,8 +4,8 @@ from duckduckgo_search import DDGS
 
 # ─── إعدادات الصفحة ───
 st.set_page_config(
-    page_title="نبراس - مساعد ذكي",
-    page_icon="🤖",
+    page_title="نبراس",
+    page_icon="💬",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -18,147 +18,82 @@ if not API_KEY:
 
 client = OpenAI(api_key=API_KEY)
 
-# ─── دوال البحث ───
-def search_web(query):
+# ─── البحث في الويب ───
+def search_web(query, max_results=3):
     try:
         with DDGS() as ddgs:
-            results = list(ddgs.text(query, max_results=3))
+            results = list(ddgs.text(query, max_results=max_results))
         if not results:
             return None
         context = ""
         for i, r in enumerate(results, 1):
             title = r.get("title", "")
             body = r.get("body", "")
-            context += f"[{i}] {title}\n{body}\n\n"
+            context += f"• {title}: {body[:200]}...\n"
         return context.strip()
     except:
         return None
 
-# ─── الشريط الجانبي (المنسدلة) ───
+# ─── الشريط الجانبي ───
 with st.sidebar:
-    st.markdown("## ⚙️ الإعدادات")
-    
-    # قائمة منسدلة لاختيار النموذج
-    model = st.selectbox(
-        "🧠 النموذج",
-        ["gpt-4o-mini", "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"],
-        index=0
-    )
-    
-    # شريط تمرير لدرجة الإبداع
-    temperature = st.slider(
-        "🌡️ الإبداع",
-        min_value=0.0,
-        max_value=2.0,
-        value=0.7,
-        step=0.1
-    )
-    
-    st.divider()
-    
-    # تفعيل البحث في الويب
-    web_search = st.toggle("🌐 البحث في الويب", value=True)
-    
-    st.divider()
-    
-    # زر مسح المحادثة
-    if st.button("🗑️ مسح المحادثة", use_container_width=True):
-        st.session_state.messages = []
+    st.markdown("### ⚙️ الإعدادات")
+    if st.button("➕ محادثة جديدة", use_container_width=True):
+        st.session_state.messages = [
+            {"role": "system", "content": "أنت نبراس، مساعد مختصر ودقيق. أجب بحد أقصى 3 جمل."},
+            {"role": "assistant", "content": "مرحباً! أنا نبراس، كيف أساعدك اليوم؟"}
+        ]
         st.rerun()
-    
-    st.caption(f"💬 الرسائل: {len(st.session_state.get('messages', []))}")
+    st.divider()
+    enable_search = st.toggle("🌐 بحث في الويب", value=True)
+    search_count = st.slider("عدد النتائج", 2, 5, 3)
+    st.divider()
+    st.caption(f"💬 الرسائل: {len(st.session_state.get('messages', [])) - 2}")
+    st.caption("✂️ ردود مختصرة لتوفير الاستهلاك")
 
-# ─── تهيئة المحادثة ───
+# ─── المحادثة ───
 if "messages" not in st.session_state:
-    st.session_state.messages = [{"role": "assistant", "content": "مرحباً! أنا نبراس، مساعدك الذكي. كيف أقدر أساعدك اليوم؟ 😊"}]
+    st.session_state.messages = [
+        {"role": "system", "content": "أنت نبراس، مساعد مختصر ودقيق. أجب بحد أقصى 3 جمل."},
+        {"role": "assistant", "content": "مرحباً! أنا نبراس، كيف أساعدك اليوم؟"}
+    ]
 
-# ─── عرض المحادثة ───
 for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.write(msg["content"])
-
-# ─── أدوات الإدخال (رفع الصور والصوت) ───
-col1, col2, col3 = st.columns([1, 1, 8])
-
-with col1:
-    uploaded_images = st.file_uploader(
-        "📷",
-        type=["png", "jpg", "jpeg"],
-        accept_multiple_files=True,
-        label_visibility="collapsed",
-        key="img_uploader"
-    )
-
-with col2:
-    audio_value = st.audio_input(
-        "🎤",
-        label_visibility="collapsed",
-        key="audio_input"
-    )
+    if msg["role"] != "system":
+        with st.chat_message(msg["role"]):
+            st.write(msg["content"])
 
 # ─── مربع الكتابة ───
-with col3:
-    prompt = st.chat_input("اكتب رسالتك هنا...")
-
-# ─── معالجة الإدخال ───
-if prompt:
-    # إضافة رسالة المستخدم
+if prompt := st.chat_input("اكتب سؤالك..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.write(prompt)
 
     with st.chat_message("assistant"):
         try:
-            # ─── البحث في الويب ───
+            # ─── بحث ───
             search_context = None
-            if web_search:
+            if enable_search:
                 with st.spinner("🌐 جاري البحث..."):
-                    search_context = search_web(prompt)
+                    search_context = search_web(prompt, search_count)
 
-            # ─── بناء التعليمات ───
-            system_prompt = "أنت نبراس، مساعد ذكي ودود. تحدث بالعربية بوضوح."
+            # ─── التعليمات ───
+            system_prompt = "أنت نبراس، مساعد مختصر ودقيق. أجب بحد أقصى 3 جمل."
             if search_context:
-                system_prompt += f"\n\n📌 معلومات محدثة من البحث:\n{search_context}"
+                system_prompt += f"\n\n📌 معلومات محدثة:\n{search_context}"
 
             messages = [{"role": "system", "content": system_prompt}]
             messages.extend(st.session_state.messages)
 
-            # ─── إذا كانت هناك صور مرفوعة ───
-            if uploaded_images:
-                # تحويل الصور إلى Base64
-                import base64
-                images_base64 = []
-                for img in uploaded_images[:3]:
-                    b64 = base64.b64encode(img.getvalue()).decode()
-                    images_base64.append(b64)
-                
-                # إضافة الصور إلى الطلب (Vision)
-                content = [{"type": "text", "text": prompt}]
-                for b64 in images_base64:
-                    content.append({
-                        "type": "image_url",
-                        "image_url": {"url": f"data:image/jpeg;base64,{b64}"}
-                    })
-                messages.append({"role": "user", "content": content})
-                
-                response = client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=messages,
-                    max_tokens=600,
-                    temperature=temperature
-                )
-                reply = response.choices[0].message.content
-            else:
-                # ─── محادثة نصية (مع تدفق) ───
-                stream = client.chat.completions.create(
-                    model=model,
-                    messages=messages,
-                    temperature=temperature,
-                    stream=True,
-                    max_tokens=500
-                )
-                reply = st.write_stream(stream)
+            # ─── ✅ هنا الكلام المتقطع (Streaming) ───
+            stream = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=messages,
+                max_tokens=200,
+                temperature=0.3,
+                stream=True  # ← هذا السطر يخلّي الرد يكتب كلمة كلمة
+            )
 
+            reply = st.write_stream(stream)  # ← وهنا يظهر التأثير
             st.session_state.messages.append({"role": "assistant", "content": reply})
 
         except Exception as e:
