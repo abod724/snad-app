@@ -106,14 +106,15 @@ prompt = st.chat_input("اسأل Nabras")
 
 if prompt:
 
-    # ⭐ إصلاح التاريخ — حذف أي تاريخ قديم حتى لا يعلق على يوم سابق
+    # ⭐ إصلاح مشكلة التاريخ المعلّق نهائيًا
     st.session_state.messages = [
         m for m in st.session_state.messages
         if "اليوم" not in m["content"]
         and "تاريخ" not in m["content"]
         and "July" not in m["content"]
+        and "June" not in m["content"]
         and "Monday" not in m["content"]
-        and "Tuesday" not in m["content"]
+        and "13" not in m["content"]
         and "2026" not in m["content"]
     ]
 
