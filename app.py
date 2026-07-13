@@ -12,16 +12,16 @@ if not API_KEY:
 
 client = OpenAI(api_key=API_KEY)
 
-# ─── الحصول على التاريخ الحقيقي ───
+# ─── التاريخ الحقيقي ───
 def get_current_date():
     return datetime.now().strftime("%A، %d %B %Y")
 
-# ─── البحث في الويب للحصول على أخبار طازجة ───
-def search_news(query):
+# ─── البحث في الويب ───
+def search_web(query):
     try:
-        results = list(google_search(query, num_results=2, lang="ar", stop=2))
+        results = list(google_search(query, num_results=3, lang="ar", stop=3))
         return "\n".join([f"• {r}" for r in results])
-    except:
+    except Exception as e:
         return ""
 
 # ─── الشريط الجانبي ───
@@ -34,7 +34,7 @@ with st.sidebar:
         ]
         st.rerun()
     st.divider()
-    enable_search = st.toggle("🌐 بحث عن أخبار", value=True)
+    enable_search = st.toggle("🌐 بحث في الويب", value=True)
     st.caption(f"📅 التاريخ اليوم: {get_current_date()}")
 
 # ─── المحادثة ───
@@ -57,7 +57,7 @@ if prompt := st.chat_input("اكتب سؤالك..."):
 
     with st.chat_message("assistant"):
         try:
-            # ─── إذا كان السؤال عن التاريخ، جاوب مباشرة (توفير للمفتاح) ───
+            # ─── جاوب عن التاريخ مباشرة ───
             if "تاريخ" in prompt or "اليوم" in prompt:
                 reply = f"اليوم هو {get_current_date()}."
                 st.write(reply)
@@ -67,18 +67,18 @@ if prompt := st.chat_input("اكتب سؤالك..."):
             # ─── بحث في الويب ───
             search_context = ""
             if enable_search:
-                with st.spinner("🌐 جاري البحث عن آخر الأخبار..."):
-                    search_context = search_news(prompt)
+                with st.spinner("🌐 جاري البحث..."):
+                    search_context = search_web(prompt)
 
             # ─── بناء التعليمات ───
             system_prompt = "أنت نبراس، مساعد ذكي ومحدث. أجب بحد أقصى 3 جمل."
             if search_context:
-                system_prompt += f"\n\n📌 آخر الأخبار:\n{search_context}"
+                system_prompt += f"\n\n📌 معلومات محدثة من البحث:\n{search_context}"
 
             messages = [{"role": "system", "content": system_prompt}]
             messages.extend(st.session_state.messages)
 
-            # ─── رد متقطع (Streaming) ───
+            # ─── رد متقطع ───
             stream = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=messages,
