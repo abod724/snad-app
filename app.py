@@ -2,12 +2,6 @@ import streamlit as st
 from openai import OpenAI
 from datetime import datetime
 import time
-import pytz
-
-# ─── دالة التاريخ (تقرأ من جهازك بتوقيتك) ───
-def get_real_date():
-    tz = pytz.timezone('Asia/Riyadh')
-    return datetime.now(tz).strftime("%A، %d %B %Y")
 
 def typewriter(text):
     placeholder = st.empty()
@@ -16,6 +10,10 @@ def typewriter(text):
         displayed += char
         placeholder.write(displayed)
         time.sleep(0.01)
+
+def get_real_date():
+    now = datetime.now()
+    return now.strftime("%A، %d %B %Y")
 
 if "menu_open" not in st.session_state:
     st.session_state.menu_open = False
@@ -68,7 +66,18 @@ if st.session_state.menu_open:
     menu_box = st.container()
     with menu_box:
         st.markdown("""
-        <div style="position: fixed; top: 50px; right: 10px; background: #ffffff; padding: 12px; border-radius: 8px; box-shadow: 0px 2px 10px rgba(0,0,0,0.2); z-index: 9999; width: 160px; font-size: 15px;">
+        <div style="
+            position: fixed;
+            top: 50px;
+            right: 10px;
+            background: #ffffff;
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0px 2px 10px rgba(0,0,0,0.2);
+            z-index: 9999;
+            width: 160px;
+            font-size: 15px;
+        ">
         <b>القائمة</b><br><br>
         """, unsafe_allow_html=True)
 
@@ -97,9 +106,10 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.write(msg["content"])
 
-prompt = st.chat_input("اسأل نبراس")
+prompt = st.chat_input("اسأل Nabras")
 
 if prompt:
+
     st.session_state.messages.append({"role": "user", "content": prompt})
 
     with st.chat_message("user"):
@@ -107,8 +117,30 @@ if prompt:
 
     with st.chat_message("assistant"):
         try:
-            # ✅ الشرط الجديد: يعطي التاريخ فقط إذا كان السؤال يسأل عنه صراحة
-            if prompt.strip().startswith(("كم", "ما", "أي", "وش")) and ("تاريخ" in prompt or "اليوم" in prompt or "التاريخ" in prompt):
+
+            # ⭐ تعريف نبراس
+            if ("من انت" in prompt) or ("عرف بنفسك" in prompt) or ("وش انت" in prompt) or ("من تكون" in prompt):
+                reply = "أنا مساعد ذكاء اصطناعي، ومبرمجي هو أبو مشعل المطيري يعمل بالتأهيل الشامل – قسم الاتصالات الإدارية."
+                typewriter(reply)
+                st.session_state.messages.append({"role": "assistant", "content": reply})
+                st.stop()
+
+            # ⭐ رد ثابت: من برمجك؟
+            if ("من برمجك" in prompt) or ("مين برمجك" in prompt) or ("من صنعك" in prompt) or ("من سواك" in prompt):
+                reply = "برمجني أبو مشعل المطيري يعمل بالتأهيل الشامل – قسم الاتصالات الإدارية."
+                typewriter(reply)
+                st.session_state.messages.append({"role": "assistant", "content": reply})
+                st.stop()
+
+            # ⭐ رد ثابت: عطني نبذة
+            if ("عطني نبذه" in prompt) or ("عطني نبذة" in prompt) or ("نبذه عنك" in prompt):
+                reply = "أنا مساعد ذكاء اصطناعي، ومبرمجي هو أبو مشعل المطيري يعمل بالتأهيل الشامل – قسم الاتصالات الإدارية."
+                typewriter(reply)
+                st.session_state.messages.append({"role": "assistant", "content": reply})
+                st.stop()
+
+            # ⭐ إصلاح التاريخ
+            if ("اليوم" in prompt) or ("تاريخ" in prompt) or ("عن اليوم" in prompt):
                 reply = f"اليوم هو {get_real_date()}."
                 typewriter(reply)
                 st.session_state.messages.append({"role": "assistant", "content": reply})
