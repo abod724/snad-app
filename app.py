@@ -127,6 +127,11 @@ if st.session_state.menu_open:
         if st.button("معلومات التطبيق"):
             st.info("✔ هذا هو مساعد نبراس الذكي")
 
+        # ⭐ زر مشاركة التطبيق
+        if st.button("🔗 مشاركة التطبيق"):
+            st.code("https://nibras-app-pp5.streamlit.app/", language="text")
+            st.success("انسخ الرابط وشاركه مع من تحب 🌟")
+
         st.markdown("</div>", unsafe_allow_html=True)
 
 # المحادثات
@@ -151,26 +156,26 @@ if prompt:
 
             # تعريف نبراس
             if ("من انت" in prompt) or ("عرف بنفسك" in prompt) or ("وش انت" in prompt) or ("من تكون" in prompt):
-                reply = "أنا مساعد ذكاء اصطناعي، ومبرمجي هو أبو مشعل المطيري يعمل بالتأهيل الشامل – قسم الاتصالات الإدارية."
+                reply = "أنا نبراس، مساعد ذكي أرد باختصار ووضوح."
                 typewriter(reply)
                 st.session_state.messages.append({"role": "assistant", "content": reply})
                 st.stop()
 
             # من برمجك؟
             if ("من برمجك" in prompt) or ("مين برمجك" in prompt) or ("من صنعك" in prompt) or ("من سواك" in prompt):
-                reply = "برمجني أبو مشعل المطيري يعمل بالتأهيل الشامل – قسم الاتصالات الإدارية."
+                reply = "برمجني أبو مشعل المطيري."
                 typewriter(reply)
                 st.session_state.messages.append({"role": "assistant", "content": reply})
                 st.stop()
 
             # نبذة
             if ("عطني نبذه" in prompt) or ("عطني نبذة" in prompt) or ("نبذه عنك" in prompt):
-                reply = "أنا مساعد ذكاء اصطناعي، ومبرمجي هو أبو مشعل المطيري يعمل بالتأهيل الشامل – قسم الاتصالات الإدارية."
+                reply = "أنا مساعد ذكاء اصطناعي أقدم لك معلومات مختصرة وواضحة."
                 typewriter(reply)
                 st.session_state.messages.append({"role": "assistant", "content": reply})
                 st.stop()
 
-            # ⭐ نظام التاريخ الجديد (بسيط وواضح)
+            # ⭐ نظام التاريخ الجديد
             explicit_date = (
                 "وش اليوم" in prompt or
                 "كم التاريخ" in prompt or
@@ -186,17 +191,17 @@ if prompt:
                 st.session_state.messages.append({"role": "assistant", "content": reply})
                 st.stop()
 
-            # الرد الطبيعي
+            # الرد الطبيعي المختصر
             with st.spinner("جاري التفكير..."):
                 response = client.responses.create(
                     model="gpt-4o-mini",
                     input=[
-                        {"role": "system", "content": "أنت مساعد نبراس الذكي. أجب بجمل قصيرة."},
+                        {"role": "system", "content": "أجب بجمل قصيرة جدًا، واضحة، مباشرة، بدون تفاصيل إضافية."},
                         *st.session_state.messages
                     ],
                     tools=[{"type": "web_search"}],
-                    max_output_tokens=200,
-                    temperature=0.3
+                    max_output_tokens=60,
+                    temperature=0.2
                 )
 
                 reply = response.output_text
