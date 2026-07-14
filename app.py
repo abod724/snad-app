@@ -15,9 +15,35 @@ def get_real_date():
     now = datetime.now()
     return now.strftime("%A، %d %B %Y")
 
+# حالة القائمة
 if "menu_open" not in st.session_state:
     st.session_state.menu_open = False
 
+# حالة الثيم
+if "theme" not in st.session_state:
+    st.session_state.theme = "light"
+
+# تطبيق الثيم
+if st.session_state.theme == "dark":
+    st.markdown("""
+    <style>
+        .stApp { background-color: #1e1e1e !important; }
+        .stChatMessageContent { color: white !important; }
+        .stButton>button { background-color: #333 !important; color: white !important; }
+        .stTextInput>div>div>input { background-color: #333 !important; color: white !important; }
+    </style>
+    """, unsafe_allow_html=True)
+else:
+    st.markdown("""
+    <style>
+        .stApp { background-color: white !important; }
+        .stChatMessageContent { color: black !important; }
+        .stButton>button { background-color: #f0f0f0 !important; color: black !important; }
+        .stTextInput>div>div>input { background-color: white !important; color: black !important; }
+    </style>
+    """, unsafe_allow_html=True)
+
+# إخفاء الهيدر والفوتر
 st.markdown("""
 <style>
     [data-testid="stChatMessageAvatarUser"],
@@ -27,9 +53,6 @@ st.markdown("""
     .stChatMessage {
         gap: 0px !important;
         margin: 2px 0 !important;
-    }
-    .stApp {
-        background: white !important;
     }
     header, footer {
         visibility: hidden !important;
@@ -50,11 +73,17 @@ if not API_KEY:
 
 client = OpenAI(api_key=API_KEY)
 
+# أعلى الصفحة
 top_col1, top_col2, top_col3 = st.columns([0.1, 0.8, 0.1])
 
 with top_col1:
     if st.button("≡"):
         st.session_state.menu_open = not st.session_state.menu_open
+
+with top_col2:
+    if st.button("🌓 تبديل الثيم"):
+        st.session_state.theme = "dark" if st.session_state.theme == "light" else "light"
+        st.rerun()
 
 with top_col3:
     if st.button("+"):
@@ -62,6 +91,7 @@ with top_col3:
         st.session_state.menu_open = False
         st.rerun()
 
+# القائمة المنسدلة
 if st.session_state.menu_open:
     menu_box = st.container()
     with menu_box:
@@ -85,7 +115,7 @@ if st.session_state.menu_open:
             st.info("✔ تم فتح الإعدادات")
 
         if st.button("تغيير الثيم"):
-            st.info("✔ سيتم إضافة الثيم لاحقًا")
+            st.info("✔ استخدم زر 🌓 بالأعلى لتبديل الثيم")
 
         if st.button("حفظ المحادثة"):
             st.success("✔ تم حفظ المحادثة")
@@ -99,6 +129,7 @@ if st.session_state.menu_open:
 
         st.markdown("</div>", unsafe_allow_html=True)
 
+# المحادثات
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -118,48 +149,82 @@ if prompt:
     with st.chat_message("assistant"):
         try:
 
-            # ⭐ تعريف نبراس
+            # تعريف نبراس
             if ("من انت" in prompt) or ("عرف بنفسك" in prompt) or ("وش انت" in prompt) or ("من تكون" in prompt):
                 reply = "أنا مساعد ذكاء اصطناعي، ومبرمجي هو أبو مشعل المطيري يعمل بالتأهيل الشامل – قسم الاتصالات الإدارية."
                 typewriter(reply)
                 st.session_state.messages.append({"role": "assistant", "content": reply})
                 st.stop()
 
-            # ⭐ رد ثابت: من برمجك؟
+            # من برمجك؟
             if ("من برمجك" in prompt) or ("مين برمجك" in prompt) or ("من صنعك" in prompt) or ("من سواك" in prompt):
                 reply = "برمجني أبو مشعل المطيري يعمل بالتأهيل الشامل – قسم الاتصالات الإدارية."
                 typewriter(reply)
                 st.session_state.messages.append({"role": "assistant", "content": reply})
                 st.stop()
 
-            # ⭐ رد ثابت: عطني نبذة
+            # نبذة
             if ("عطني نبذه" in prompt) or ("عطني نبذة" in prompt) or ("نبذه عنك" in prompt):
                 reply = "أنا مساعد ذكاء اصطناعي، ومبرمجي هو أبو مشعل المطيري يعمل بالتأهيل الشامل – قسم الاتصالات الإدارية."
                 typewriter(reply)
                 st.session_state.messages.append({"role": "assistant", "content": reply})
                 st.stop()
 
-            # ⭐ إصلاح التاريخ
-            if ("اليوم" in prompt) or ("تاريخ" in prompt) or ("عن اليوم" in prompt):
+            # ⭐ فلترة التاريخ الذكية
+            explicit_date = (
+                "وش اليوم" in prompt or
+                "كم التاريخ" in prompt or
+                "اعطني التاريخ" in prompt or
+                "اعطني اليوم" in prompt or
+                "تاريخ اليوم" in prompt or
+                "اليوم كم" in prompt
+            )
+
+            contains_date_word = ("اليوم" in prompt or "تاريخ" in prompt)
+
+            context_words = (
+                "مباراة" in prompt or
+                "مثل اليوم" in prompt or
+                "وش صار اليوم" in prompt or
+                "عن اليوم" in prompt or
+                "وش عندهم اليوم" in prompt or
+                "وش عندك اليوم" in prompt
+            )
+
+            if explicit_date:
                 reply = f"اليوم هو {get_real_date()}."
                 typewriter(reply)
                 st.session_state.messages.append({"role": "assistant", "content": reply})
-            else:
-                with st.spinner("جاري التفكير..."):
-                    response = client.responses.create(
-                        model="gpt-4o-mini",
-                        input=[
-                            {"role": "system", "content": "أنت مساعد نبراس الذكي. أجب بجمل قصيرة."},
-                            *st.session_state.messages
-                        ],
-                        tools=[{"type": "web_search"}],
-                        max_output_tokens=200,
-                        temperature=0.3
-                    )
+                st.stop()
 
-                    reply = response.output_text
-                    typewriter(reply)
-                    st.session_state.messages.append({"role": "assistant", "content": reply})
+            elif contains_date_word and not explicit_date and context_words:
+                reply = "يبدو أنك تتحدث عن حدث أو شيء مرتبط باليوم، وليس عن التاريخ نفسه."
+                typewriter(reply)
+                st.session_state.messages.append({"role": "assistant", "content": reply})
+                st.stop()
+
+            elif contains_date_word and not explicit_date:
+                reply = "إذا كنت تريد معرفة التاريخ أو اليوم، اطلب ذلك بشكل صريح مثل: (وش اليوم؟)"
+                typewriter(reply)
+                st.session_state.messages.append({"role": "assistant", "content": reply})
+                st.stop()
+
+            # الرد الطبيعي
+            with st.spinner("جاري التفكير..."):
+                response = client.responses.create(
+                    model="gpt-4o-mini",
+                    input=[
+                        {"role": "system", "content": "أنت مساعد نبراس الذكي. أجب بجمل قصيرة."},
+                        *st.session_state.messages
+                    ],
+                    tools=[{"type": "web_search"}],
+                    max_output_tokens=200,
+                    temperature=0.3
+                )
+
+                reply = response.output_text
+                typewriter(reply)
+                st.session_state.messages.append({"role": "assistant", "content": reply})
 
         except Exception as e:
             st.error(f"⚠️ خطأ: {str(e)}")
