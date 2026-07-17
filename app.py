@@ -1,48 +1,11 @@
 import streamlit as st
-import sqlite3
 import time
 from groq import Groq
 from openai import OpenAI
 import requests
-from datetime import datetime
 
 # ============================
-# 1) إنشاء قاعدة البيانات
-# ============================
-
-def init_db():
-    conn = sqlite3.connect("database.db")
-    c = conn.cursor()
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS memory (
-            key TEXT PRIMARY KEY,
-            value TEXT
-        )
-    """)
-    conn.commit()
-    conn.close()
-
-init_db()
-
-# حفظ في الذاكرة
-def save_memory(key, value):
-    conn = sqlite3.connect("database.db")
-    c = conn.cursor()
-    c.execute("REPLACE INTO memory (key, value) VALUES (?, ?)", (key, value))
-    conn.commit()
-    conn.close()
-
-# استرجاع من الذاكرة
-def load_memory(key):
-    conn = sqlite3.connect("database.db")
-    c = conn.cursor()
-    c.execute("SELECT value FROM memory WHERE key = ?", (key,))
-    result = c.fetchone()
-    conn.close()
-    return result[0] if result else None
-
-# ============================
-# 2) إعدادات المفاتيح والمحركات
+# 1) إعدادات المفاتيح والمحركات
 # ============================
 
 OPENAI_KEY = st.secrets.get("OPENAI_API_KEY")
@@ -52,7 +15,7 @@ openai_client = OpenAI(api_key=OPENAI_KEY)
 groq_client = Groq(api_key=GROQ_KEY)
 
 # ============================
-# 3) اختيار موديلات Groq الجديدة
+# 2) اختيار موديلات Groq الجديدة
 # ============================
 
 def get_latest_groq_model():
@@ -80,7 +43,7 @@ def get_latest_groq_model():
 latest_model = get_latest_groq_model()
 
 # ============================
-# 4) دالة البحث بالويب
+# 3) دالة البحث بالويب
 # ============================
 
 def web_search(query):
@@ -96,7 +59,7 @@ def web_search(query):
     return text if text else "لا توجد نتائج."
 
 # ============================
-# 5) دوال مساعدة
+# 4) دالة الكتابة المتدرجة
 # ============================
 
 def typewriter(text):
@@ -108,7 +71,7 @@ def typewriter(text):
         time.sleep(0.01)
 
 # ============================
-# 6) واجهة Streamlit
+# 5) واجهة Streamlit
 # ============================
 
 st.set_page_config(page_title="Nabras", layout="wide")
@@ -123,7 +86,7 @@ for msg in st.session_state.messages:
         st.write(msg["content"])
 
 # ============================
-# 7) استقبال الرسائل
+# 6) استقبال الرسائل
 # ============================
 
 prompt = st.chat_input("اسأل Nabras")
@@ -139,7 +102,7 @@ if prompt:
         try:
 
             # ============================
-            # 8) منع ذكر المؤسس أو المطور
+            # منع ذكر المؤسس أو المطور
             # ============================
 
             founder_keywords = [
@@ -157,42 +120,20 @@ if prompt:
                 st.stop()
 
             # ============================
-            # 9) تخزين الاسم في الذاكرة
-            # ============================
-
-            if "اسمي" in prompt:
-                name = prompt.replace("اسمي", "").strip()
-                save_memory("user_name", name)
-                reply = f"تم حفظ اسمك يا {name}."
-                typewriter(reply)
-                st.session_state.messages.append({"role": "assistant", "content": reply})
-                st.stop()
-
-            # ============================
-            # 10) استرجاع الذاكرة
-            # ============================
-
-            user_name = load_memory("user_name")
-
-            memory_text = f"""
-اسم المستخدم: {user_name}
-"""
-
-            # ============================
-            # 11) بحث ويب
+            # بحث ويب
             # ============================
 
             search_results = web_search(prompt)
 
             # ============================
-            # 12) الردود حسب المحرك
+            # الردود حسب المحرك
             # ============================
 
             if engine == "OpenAI":
                 response = openai_client.responses.create(
                     model="gpt-4o-mini",
                     input=[
-                        {"role": "system", "content": f"استخدم الذاكرة:\n{memory_text}\nنتائج البحث:\n{search_results}"},
+                        {"role": "system", "content": f"استخدم نتائج البحث:\n{search_results}"},
                         *st.session_state.messages
                     ],
                     max_output_tokens=200,
@@ -205,9 +146,6 @@ if prompt:
                     model=latest_model,
                     messages=[
                         {"role": "system", "content": f"""
-استخدم الذاكرة التالية:
-{memory_text}
-
 استخدم نتائج البحث:
 {search_results}
 
