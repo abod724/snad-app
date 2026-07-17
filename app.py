@@ -218,8 +218,9 @@ if prompt:
                     reply = response.output_text
 
                 else:
+                    # ⭐ تم تغيير موديل Groq هنا
                     response = groq_client.chat.completions.create(
-                        model="llama3-70b-8192",
+                        model="llama3-8b-8192",  # ⭐ الموديل الجديد المدعوم
                         messages=[
                             {"role": "system", "content": f"أنت نبراس الذكي. نتائج البحث:\n{search_results}"},
                             *st.session_state.messages
