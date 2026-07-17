@@ -5,6 +5,27 @@ from datetime import datetime
 import time
 import requests
 
+# دالة جلب أحدث موديل تلقائيًا من Groq
+def get_latest_groq_model():
+    try:
+        groq_key = st.secrets.get("GROQ_API_KEY")
+        headers = {"Authorization": f"Bearer {groq_key}"}
+        response = requests.get("https://api.groq.com/openai/v1/models", headers=headers).json()
+
+        models = response.get("data", [])
+        names = [m["id"] for m in models]
+
+        # نختار أحدث موديل من Llama 3
+        for m in names:
+            if "llama3" in m:
+                return m
+
+        # لو ما لقى Llama3 يرجع أي موديل متاح
+        return names[0] if names else "llama3-8b-8192"
+
+    except:
+        return "llama3-8b-8192"  # موديل احتياطي
+
 # دالة البحث بالويب عبر SerpAPI
 def web_search(query):
     serp_key = st.secrets.get("SERPAPI_API_KEY")
@@ -96,6 +117,9 @@ groq_client = Groq(api_key=GROQ_KEY)
 engine = st.selectbox("اختر المحرك", ["Groq", "OpenAI"])
 st.session_state.engine = engine
 selected_engine = st.session_state.engine
+
+# جلب أحدث موديل تلقائيًا
+latest_model = get_latest_groq_model()
 
 # أعلى الصفحة
 top_col1, top_col2, top_col3 = st.columns([0.1, 0.8, 0.1])
@@ -218,9 +242,9 @@ if prompt:
                     reply = response.output_text
 
                 else:
-                    # ⭐ تم تغيير موديل Groq هنا
+                    # ⭐ استخدام أحدث موديل تلقائيًا
                     response = groq_client.chat.completions.create(
-                        model="llama3-8b-8192",  # ⭐ الموديل الجديد المدعوم
+                        model=latest_model,
                         messages=[
                             {"role": "system", "content": f"أنت نبراس الذكي. نتائج البحث:\n{search_results}"},
                             *st.session_state.messages
