@@ -20,7 +20,6 @@ def get_latest_groq_model():
             if "llama3" in m:
                 return m
 
-        # لو ما لقى Llama3 يرجع أي موديل متاح
         return names[0] if names else "llama3-8b-8192"
 
     except:
@@ -61,7 +60,7 @@ if "theme" not in st.session_state:
 
 # حالة المحرك الافتراضي
 if "engine" not in st.session_state:
-    st.session_state.engine = "Groq"   # ⭐ المحرك الأساسي
+    st.session_state.engine = "Groq"
 
 # تطبيق الثيم
 if st.session_state.theme == "dark":
@@ -113,7 +112,7 @@ GROQ_KEY = st.secrets.get("GROQ_API_KEY")
 openai_client = OpenAI(api_key=OPENAI_KEY)
 groq_client = Groq(api_key=GROQ_KEY)
 
-# اختيار المحرك (Groq هو الأول والأساسي)
+# اختيار المحرك
 engine = st.selectbox("اختر المحرك", ["Groq", "OpenAI"])
 st.session_state.engine = engine
 selected_engine = st.session_state.engine
@@ -242,11 +241,17 @@ if prompt:
                     reply = response.output_text
 
                 else:
-                    # ⭐ استخدام أحدث موديل تلقائيًا
+                    # ⭐ استخدام أحدث موديل تلقائيًا + رد وسط ومفيد
                     response = groq_client.chat.completions.create(
                         model=latest_model,
                         messages=[
-                            {"role": "system", "content": f"أنت نبراس الذكي. نتائج البحث:\n{search_results}"},
+                            {"role": "system", "content": f"""
+                            أنت نبراس الذكي.
+                            اكتب ردًا متوسط الطول، لا طويل ولا قصير.
+                            استخدم نتائج البحث التالية لتقديم معلومات دقيقة ومحدثة:
+                            {search_results}
+                            لا تكرر الكلام، ولا تكتب معلومات غير مؤكدة.
+                            """},
                             *st.session_state.messages
                         ]
                     )
