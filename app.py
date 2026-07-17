@@ -1,7 +1,22 @@
 import streamlit as st
 from openai import OpenAI
+from groq import Groq
 from datetime import datetime
 import time
+import requests
+
+# دالة البحث بالويب عبر SerpAPI
+def web_search(query):
+    serp_key = st.secrets.get("SERPAPI_API_KEY")
+    if not serp_key:
+        return "لا يوجد مفتاح بحث ويب."
+    url = f"https://serpapi.com/search?q={query}&engine=google&api_key={serp_key}"
+    data = requests.get(url).json()
+    results = data.get("organic_results", [])
+    text = ""
+    for r in results[:5]:
+        text += f"- {r.get('title')}: {r.get('snippet')}\n"
+    return text if text else "لا توجد نتائج."
 
 def typewriter(text):
     placeholder = st.empty()
@@ -22,6 +37,10 @@ if "menu_open" not in st.session_state:
 # حالة الثيم
 if "theme" not in st.session_state:
     st.session_state.theme = "light"
+
+# حالة المحرك الافتراضي
+if "engine" not in st.session_state:
+    st.session_state.engine = "Groq"   # ⭐ المحرك الأساسي
 
 # تطبيق الثيم
 if st.session_state.theme == "dark":
@@ -66,12 +85,17 @@ st.markdown("""
 
 st.set_page_config(page_title=" ", page_icon="", layout="wide")
 
-API_KEY = st.secrets.get("OPENAI_API_KEY")
-if not API_KEY:
-    st.error("🔴 مفتاح OpenAI غير موجود!")
-    st.stop()
+# مفاتيح
+OPENAI_KEY = st.secrets.get("OPENAI_API_KEY")
+GROQ_KEY = st.secrets.get("GROQ_API_KEY")
 
-client = OpenAI(api_key=API_KEY)
+openai_client = OpenAI(api_key=OPENAI_KEY)
+groq_client = Groq(api_key=GROQ_KEY)
+
+# اختيار المحرك (Groq هو الأول والأساسي)
+engine = st.selectbox("اختر المحرك", ["Groq", "OpenAI"])
+st.session_state.engine = engine
+selected_engine = st.session_state.engine
 
 # أعلى الصفحة
 top_col1, top_col2, top_col3 = st.columns([0.1, 0.8, 0.1])
@@ -127,10 +151,9 @@ if st.session_state.menu_open:
         if st.button("معلومات التطبيق"):
             st.info("✔ هذا هو مساعد نبراس الذكي")
 
-        # ⭐ زر مشاركة التطبيق
         if st.button("🔗 مشاركة التطبيق"):
             st.code("https://nibras-app-pp5.streamlit.app/", language="text")
-            st.success("انسخ الرابط وشاركه مع من تحب 🌟")
+            st.success("انسخ الرابط وشاركه 🌟")
 
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -155,37 +178,21 @@ if prompt:
         try:
 
             # تعريف نبراس
-            if ("من انت" in prompt) or ("عرف بنفسك" in prompt) or ("وش انت" in prompt) or ("من تكون" in prompt):
-                reply = "أنا مساعد ذكاء اصطناعي، ومبرمجي هو أبو مشعل المطيري يعمل بالتأهيل الشامل – قسم الاتصالات الإدارية."
+            if ("من انت" in prompt) or ("عرف بنفسك" in prompt):
+                reply = "أنا مساعد نبراس الذكي، ومبرمجي هو أبو مشعل المطيري."
                 typewriter(reply)
                 st.session_state.messages.append({"role": "assistant", "content": reply})
                 st.stop()
 
             # من برمجك؟
-            if ("من برمجك" in prompt) or ("مين برمجك" in prompt) or ("من صنعك" in prompt) or ("من سواك" in prompt):
-                reply = "برمجني أبو مشعل المطيري يعمل بالتأهيل الشامل – قسم الاتصالات الإدارية."
+            if ("من برمجك" in prompt):
+                reply = "برمجني أبو مشعل المطيري يعمل بالتأهيل الشامل."
                 typewriter(reply)
                 st.session_state.messages.append({"role": "assistant", "content": reply})
                 st.stop()
 
-            # نبذة
-            if ("عطني نبذه" in prompt) or ("عطني نبذة" in prompt) or ("نبذه عنك" in prompt):
-                reply = "أنا مساعد ذكاء اصطناعي، ومبرمجي هو أبو مشعل المطيري يعمل بالتأهيل الشامل – قسم الاتصالات الإدارية."
-                typewriter(reply)
-                st.session_state.messages.append({"role": "assistant", "content": reply})
-                st.stop()
-
-            # ⭐ نظام التاريخ الجديد
-            explicit_date = (
-                "وش اليوم" in prompt or
-                "كم التاريخ" in prompt or
-                "اعطني التاريخ" in prompt or
-                "اعطني اليوم" in prompt or
-                "تاريخ اليوم" in prompt or
-                "اليوم كم" in prompt
-            )
-
-            if explicit_date:
+            # التاريخ
+            if ("وش اليوم" in prompt) or ("كم التاريخ" in prompt):
                 reply = f"اليوم هو {get_real_date()}."
                 typewriter(reply)
                 st.session_state.messages.append({"role": "assistant", "content": reply})
@@ -193,18 +200,33 @@ if prompt:
 
             # الرد الطبيعي
             with st.spinner("جاري التفكير..."):
-                response = client.responses.create(
-                    model="gpt-4o-mini",
-                    input=[
-                        {"role": "system", "content": "أنت مساعد نبراس الذكي. أجب بجمل قصيرة."},
-                        *st.session_state.messages
-                    ],
-                    tools=[{"type": "web_search"}],
-                    max_output_tokens=200,
-                    temperature=0.3
-                )
 
-                reply = response.output_text
+                # بحث ويب
+                search_results = web_search(prompt)
+
+                if selected_engine == "OpenAI":
+                    response = openai_client.responses.create(
+                        model="gpt-4o-mini",
+                        input=[
+                            {"role": "system", "content": f"أنت نبراس الذكي. نتائج البحث:\n{search_results}"},
+                            *st.session_state.messages
+                        ],
+                        tools=[{"type": "web_search"}],
+                        max_output_tokens=200,
+                        temperature=0.3
+                    )
+                    reply = response.output_text
+
+                else:
+                    response = groq_client.chat.completions.create(
+                        model="llama3-70b-8192",
+                        messages=[
+                            {"role": "system", "content": f"أنت نبراس الذكي. نتائج البحث:\n{search_results}"},
+                            *st.session_state.messages
+                        ]
+                    )
+                    reply = response.choices[0].message.content
+
                 typewriter(reply)
                 st.session_state.messages.append({"role": "assistant", "content": reply})
 
