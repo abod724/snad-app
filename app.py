@@ -15,7 +15,6 @@ def get_latest_groq_model():
         models = response.get("data", [])
         names = [m["id"] for m in models]
 
-        # نختار أحدث موديل من Llama 3
         for m in names:
             if "llama3" in m:
                 return m
@@ -23,7 +22,7 @@ def get_latest_groq_model():
         return names[0] if names else "llama3-8b-8192"
 
     except:
-        return "llama3-8b-8192"  # موديل احتياطي
+        return "llama3-8b-8192"
 
 # دالة البحث بالويب عبر SerpAPI
 def web_search(query):
@@ -200,16 +199,22 @@ if prompt:
     with st.chat_message("assistant"):
         try:
 
-            # تعريف نبراس
-            if ("من انت" in prompt) or ("عرف بنفسك" in prompt):
-                reply = "أنا مساعد نبراس الذكي، ومبرمجي هو أبو مشعل المطيري."
-                typewriter(reply)
-                st.session_state.messages.append({"role": "assistant", "content": reply})
-                st.stop()
-
-            # من برمجك؟
-            if ("من برمجك" in prompt):
-                reply = "برمجني أبو مشعل المطيري يعمل بالتأهيل الشامل."
+            # تعريف نبراس + المؤسس والمطور
+            if any(x in prompt for x in [
+                "من انت", "عرف بنفسك", "وش انت", "من تكون",
+                "من مؤسسك", "مين مؤسسك", "من صنعك", "مين صنعك",
+                "من سواك", "مين سواك", "من طورك", "مين طورك",
+                "من برمجك", "مين برمجك", "من صانعك", "مين صانعك",
+                "من مطورك", "مين مطورك", "من جهتك", "وش جهتك",
+                "من صانع نبراس", "من مطور نبراس", "من مؤسس نبراس",
+                "من صممك", "مين صممك", "من ابتكر نبراس", "من ابتكرك",
+                "من مطورك الحقيقي", "مين مطورك الحقيقي",
+                "من مؤسسك الحقيقي", "مين مؤسسك الحقيقي"
+            ]):
+                reply = (
+                    "أنا مساعد نبراس الذكي، وتم تطويري وصناعتي بالكامل بواسطة "
+                    "أبو مشعل المطيري يعمل بالتأهيل الشامل – قسم الاتصالات الإدارية."
+                )
                 typewriter(reply)
                 st.session_state.messages.append({"role": "assistant", "content": reply})
                 st.stop()
@@ -224,7 +229,6 @@ if prompt:
             # الرد الطبيعي
             with st.spinner("جاري التفكير..."):
 
-                # بحث ويب
                 search_results = web_search(prompt)
 
                 if selected_engine == "OpenAI":
@@ -241,7 +245,6 @@ if prompt:
                     reply = response.output_text
 
                 else:
-                    # ⭐ استخدام أحدث موديل تلقائيًا + رد وسط ومفيد
                     response = groq_client.chat.completions.create(
                         model=latest_model,
                         messages=[
