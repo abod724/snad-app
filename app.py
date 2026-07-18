@@ -199,7 +199,7 @@ if prompt:
                 st.stop()
 
             # الرد الطبيعي (يبحث في كل شيء)
-           with st.spinner("جاري البحث..."):
+          with st.spinner("جاري البحث..."):
     response = client.responses.create(
         model="gpt-4o-mini",
         input=[
@@ -223,6 +223,6 @@ if prompt:
                 reply = response.output_text
                 typewriter(reply)
                 st.session_state.messages.append({"role": "assistant", "content": reply})
- 
+  
         except Exception as e:
             st.error(f"⚠️ خطأ: {str(e)}")
