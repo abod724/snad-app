@@ -153,15 +153,23 @@ if prompt:
     with st.chat_message("assistant"):
         try:
 
-            # تعريف نبراس
-            if ("من انت" in prompt) or ("عرف بنفسك" in prompt) or ("وش انت" in prompt) or ("من تكون" in prompt):
+            # فلتر أسئلة المؤسس والمبرمج والجهة
+            founder_keywords = [
+                "من اسسك", "مين اسسك", "من طورك", "مين طورك",
+                "من برمجك", "مين برمجك", "من جهتك", "وش جهتك",
+                "من صانعك", "مين صانعك", "من سواك", "مين سواك",
+                "من مطورك", "مين مطورك", "من صنعك", "مين صنعك",
+                "من ابتكرك", "من ابتكر نبراس", "من صممك"
+            ]
+
+            if any(k in prompt for k in founder_keywords):
                 reply = "أنا مساعد ذكاء اصطناعي تم تطويري وبرمجتي على يد أبو مشعل المطيري يعمل بالتأهيل الشامل بقسم الاتصالات الإدارية."
                 typewriter(reply)
                 st.session_state.messages.append({"role": "assistant", "content": reply})
                 st.stop()
 
-            # من برمجك؟
-            if ("من برمجك" in prompt) or ("مين برمجك" in prompt) or ("من صنعك" in prompt) or ("من سواك" in prompt):
+            # تعريف نبراس
+            if ("من انت" in prompt) or ("عرف بنفسك" in prompt) or ("وش انت" in prompt) or ("من تكون" in prompt):
                 reply = "أنا مساعد ذكاء اصطناعي تم تطويري وبرمجتي على يد أبو مشعل المطيري يعمل بالتأهيل الشامل بقسم الاتصالات الإدارية."
                 typewriter(reply)
                 st.session_state.messages.append({"role": "assistant", "content": reply})
@@ -190,8 +198,8 @@ if prompt:
                 st.session_state.messages.append({"role": "assistant", "content": reply})
                 st.stop()
 
-            # الرد الطبيعي
-            with st.spinner("جاري التفكير..."):
+            # الرد الطبيعي (يبحث في كل شيء)
+            with st.spinner("جاري البحث..."):
                 response = client.responses.create(
                     model="gpt-4o-mini",
                     input=[
@@ -201,7 +209,7 @@ if prompt:
                         },
                         *st.session_state.messages
                     ],
-                    tools=[{"type": "web_search"}],
+                    tools=[{"type": "web_search"}],  # البحث شغال
                     max_output_tokens=200,
                     temperature=0.3
                 )
