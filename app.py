@@ -201,7 +201,7 @@ if prompt:
                     ],
                     tools=[{"type": "web_search"}],
                     max_output_tokens=600,
-                    temperature=0.7
+                    temperature=0.8
                 )
 
                 reply = response.output_text
