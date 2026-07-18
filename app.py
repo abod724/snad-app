@@ -198,8 +198,8 @@ if prompt:
                 st.session_state.messages.append({"role": "assistant", "content": reply})
                 st.stop()
 
-            # الرد الطبيعي (يبحث في كل شيء)
-          with st.spinner("جاري البحث..."):
+            #  الطبيعي (يبحث في كل شيء)
+          with st.sالردpinner("جاري البحث..."):
     response = client.responses.create(
         model="gpt-4o-mini",
         input=[
