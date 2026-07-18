@@ -163,14 +163,14 @@ if prompt:
             ]
 
             if any(k in prompt for k in founder_keywords):
-                reply = "أنا مساعد ذكاء اصطناعي تم تطويري وبرمجتي على يد أبو مشعل المطيري يعمل بالتأهيل الشامل بقسم الاتصالات الإدارية."
+                reply = "أنا مساعد ذكاء اصطناعي نبراس تم تطويري وبرمجتي على يد أبو مشعل المطيري يعمل بالتأهيل الشامل بقسم الاتصالات الإدارية."
                 typewriter(reply)
                 st.session_state.messages.append({"role": "assistant", "content": reply})
                 st.stop()
 
             # تعريف نبراس
             if ("من انت" in prompt) or ("عرف بنفسك" in prompt) or ("وش انت" in prompt) or ("من تكون" in prompt):
-                reply = "أنا مساعد ذكاء اصطناعي تم تطويري وبرمجتي على يد أبو مشعل المطيري يعمل بالتأهيل الشامل بقسم الاتصالات الإدارية."
+                reply = "أنا مساعد ذكاء اصطناعي نبراس تم تطويري وبرمجتي على يد أبو مشعل المطيري يعمل بالتأهيل الشامل بقسم الاتصالات الإدارية."
                 typewriter(reply)
                 st.session_state.messages.append({"role": "assistant", "content": reply})
                 st.stop()
