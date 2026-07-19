@@ -196,7 +196,7 @@ if prompt:
                 response = client.responses.create(
                     model="gpt-4o-mini",
                     input=[
-                        {"role": "system", "content": "أنت مساعد نبراس الذكي.كن ودود وممتن مع المستخدم ورحب فيه وتفاعل معه ."},
+                        {"role": "system", "content": "أنت مساعد نبراس الذكي.كن ودود وممتن مع المستخدم وتكلم بلهجه سعوديه عاميه وخلك مرح وتفاعل مع المستخدم .صير له صديق وونيس لا يستغني عنك وعن سوالف ورحب فيه وتفاعل معه ."},
                         *st.session_state.messages
                     ],
                     tools=[{"type": "web_search"}],
