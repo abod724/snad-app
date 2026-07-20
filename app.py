@@ -4,11 +4,11 @@ from datetime import datetime
 import time
 import re
 
-# ==================== قراءة ملف المعرفة (كما هي بدون أي تغيير) ====================
+# ==================== قراءة ملف المعرفة ====================
 with open("knowledge.md", "r", encoding="utf-8") as f:
     knowledge = f.read()
 
-# ==================== دوال مساعدة (كما هي بدون أي تغيير) ====================
+# ==================== دوال مساعدة ====================
 def typewriter(text):
     placeholder = st.empty()
     displayed = ""
@@ -21,7 +21,7 @@ def get_real_date():
     now = datetime.now()
     return now.strftime("%A، %d %B %Y")
 
-# ==================== دالة تحديد الحاجة لبحث ويب (كما هي بدون أي تغيير) ====================
+# ==================== دالة تحديد الحاجة لبحث ويب (تعمل داخلياً فقط) ====================
 def needs_web_search(prompt):
     prompt_clean = prompt.strip().lower()
     
@@ -40,7 +40,7 @@ def needs_web_search(prompt):
         if re.search(pattern, prompt_clean):
             return False
 
-    # ✅ تحتاج بحث ويب
+    # ✅ تحتاج بحث ويب (القرار داخلي فقط)
     search_patterns = [
         r"اليوم|هذا الأسبوع|هذا الشهر|هذه السنة|الآن|حاليا|آخر|أحدث|جديد|مؤخرا",
         r"تاريخ اليوم|كم التاريخ|وش اليوم",
@@ -61,14 +61,14 @@ def needs_web_search(prompt):
 
     return False
 
-# ==================== حالة الجلسة (كما هي بدون أي تغيير) ====================
+# ==================== حالة الجلسة ====================
 if "menu_open" not in st.session_state:
     st.session_state.menu_open = False
 
 if "theme" not in st.session_state:
     st.session_state.theme = "light"
 
-# ==================== تطبيق الثيم (كما هي بدون أي تغيير) ====================
+# ==================== تطبيق الثيم ====================
 if st.session_state.theme == "dark":
     st.markdown("""
     <style>
@@ -88,7 +88,7 @@ else:
     </style>
     """, unsafe_allow_html=True)
 
-# ==================== إخفاء الهيدر والفوتر (كما هي بدون أي تغيير) ====================
+# ==================== إخفاء الهيدر والفوتر ====================
 st.markdown("""
 <style>
     [data-testid="stChatMessageAvatarUser"],
@@ -111,7 +111,7 @@ st.markdown("""
 
 st.set_page_config(page_title=" ", page_icon="", layout="wide")
 
-# ==================== قراءة المفتاح من صندوق الأسرار (كما هي بدون أي تغيير تماماً) ====================
+# ==================== قراءة المفتاح من صندوق الأسرار ====================
 API_KEY = st.secrets.get("OPENAI_API_KEY")
 if not API_KEY:
     st.error("🔴 مفتاح OpenAI غير موجود!")
@@ -119,7 +119,7 @@ if not API_KEY:
 
 client = OpenAI(api_key=API_KEY)
 
-# ==================== أعلى الصفحة (كما هي بدون أي تغيير) ====================
+# ==================== أعلى الصفحة ====================
 top_col1, top_col2, top_col3 = st.columns([0.1, 0.8, 0.1])
 
 with top_col1:
@@ -137,7 +137,7 @@ with top_col3:
         st.session_state.menu_open = False
         st.rerun()
 
-# ==================== القائمة المنسدلة (كما هي بدون أي تغيير) ====================
+# ==================== القائمة المنسدلة ====================
 if st.session_state.menu_open:
     menu_box = st.container()
     with menu_box:
@@ -179,7 +179,7 @@ if st.session_state.menu_open:
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-# ==================== المحادثات (كما هي بدون أي تغيير) ====================
+# ==================== المحادثات ====================
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -189,7 +189,7 @@ for msg in st.session_state.messages:
 
 prompt = st.chat_input("اسأل Nabras")
 
-# ==================== معالجة الرسائل مع إضافة اسم ملف المعرفة ====================
+# ==================== معالجة الرسائل ====================
 if prompt:
 
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -199,7 +199,7 @@ if prompt:
 
     with st.chat_message("assistant"):
         try:
-            # ⭐ نظام التاريخ (كما هو بدون أي تغيير)
+            # ⭐ نظام التاريخ
             explicit_date = (
                 "وش اليوم" in prompt or
                 "كم التاريخ" in prompt or
@@ -215,11 +215,10 @@ if prompt:
                 st.session_state.messages.append({"role": "assistant", "content": reply})
                 st.stop()
 
-            # ✨ القرار الذكي للبحث (كما هو بدون أي تغيير)
+            # ✨ القرار الذكي الداخلي: بحث أم لا؟ (المستخدم ما يرى شيء من هذا)
             use_web = needs_web_search(prompt)
 
-            # 🆕 هنا فقط تم إضافة اسم الملف بشكل صريح داخل رسالة النظام
-            # كل باقي المعاملات كما هي بالضبط
+            # 📌 رسالة النظام مع اسم ملف المعرفة الرسمي
             system_message = f"""
 اسم ملف المعرفة الأساسي الذي تعتمد عليه بالكامل هو: knowledge.md
 هذا الملف هو المرجع الأول والأعلى أولوية في كل الردود، قبل أي مصدر آخر.
@@ -233,7 +232,6 @@ if prompt:
             api_params = {
                 "model": "gpt-4o-mini",
                 "input": [
-                    # ✅ تم استبدال knowledge المباشرة بـ system_message التي تحتوي على اسم الملف
                     {"role": "system", "content": system_message},
                     *st.session_state.messages
                 ],
@@ -241,7 +239,7 @@ if prompt:
                 "temperature": 0.3
             }
 
-            # 🚀 إضافة أداة البحث عند الحاجة (كما هي بدون أي تغيير)
+            # 🚀 تفعيل البحث داخلياً فقط لو احتجنا له (بدون أي إشارة خارجية)
             if use_web:
                 api_params["tools"] = [{
                     "type": "web_search",
@@ -251,11 +249,11 @@ if prompt:
                         "country": "SA",
                     }
                 }]
-                spinner_text = "🔍 جاري البحث عن أحدث المعلومات..."
-            else:
-                spinner_text = "جاري التفكير..."
 
-            # ⭐ استدعاء الـ API (كما هو بدون أي تغيير)
+            # ✅ الرسالة الموحدة والطبيعية لكل شيء
+            spinner_text = "جاري التفكير..."
+
+            # ⭐ استدعاء الـ API
             with st.spinner(spinner_text):
                 response = client.responses.create(**api_params)
 
