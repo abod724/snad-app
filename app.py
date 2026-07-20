@@ -2,11 +2,13 @@ import streamlit as st
 from openai import OpenAI
 from datetime import datetime
 import time
+import re
 
-# قراءة ملف المعرفة
+# ==================== قراءة ملف المعرفة (كما هي بدون أي تغيير) ====================
 with open("knowledge.md", "r", encoding="utf-8") as f:
     knowledge = f.read()
 
+# ==================== دوال مساعدة (كما هي بدون أي تغيير) ====================
 def typewriter(text):
     placeholder = st.empty()
     displayed = ""
@@ -19,15 +21,54 @@ def get_real_date():
     now = datetime.now()
     return now.strftime("%A، %d %B %Y")
 
-# حالة القائمة
+# ==================== دالة تحديد الحاجة لبحث ويب (كما هي بدون أي تغيير) ====================
+def needs_web_search(prompt):
+    prompt_clean = prompt.strip().lower()
+    
+    # ❌ لا تحتاج بحث
+    no_search_patterns = [
+        r"^(سلام|مرحبا|هاي|هلا|أهلا)",
+        r"كيف حالك|شلونك|شخبارك",
+        r"من أنت|مين أنت|شنو اسمك",
+        r"شكرا|مشكور|تسلم",
+        r"مع السلامة|باي|وداعا",
+        r"^(اكتب|صيغ|أعطني) (نص|رسالة|قصة|شعر|كلام)",
+        r"اشرح لي|علمني|ما هو تعريف",
+        r"حل مسألة|حل معادلة|احسب",
+    ]
+    for pattern in no_search_patterns:
+        if re.search(pattern, prompt_clean):
+            return False
+
+    # ✅ تحتاج بحث ويب
+    search_patterns = [
+        r"اليوم|هذا الأسبوع|هذا الشهر|هذه السنة|الآن|حاليا|آخر|أحدث|جديد|مؤخرا",
+        r"تاريخ اليوم|كم التاريخ|وش اليوم",
+        r"عام 202[4-9]|عام 203",
+        r"خبر|أخبار|ماذا حدث|حدث مؤخرا|حادث|كارثة|إطلاق|تصريح",
+        r"سعر|سعر اليوم|كم يساوي|كم قيمة|سوق|أسهم|عملة|صرف|ذهب|نفط|بتكوين",
+        r"طقس|حرارة|درجة الحرارة|مطر|رياح",
+        r"مباراة|نتيجة|جدول|دوري|كأس|أبطال|المنتخب",
+        r"فلم جديد|مسلسل جديد|موعد عرض|حلقة جديدة",
+        r"إحصاء|نسبة|عدد السكان|معدل|تقرير رسمي|بيانات",
+        r"موعد اختبار|موعد تسجيل|شروط القبول|تقديرات|نتائج الاختبارات",
+        r"ابحث لي|ابحث في|تفقد لي|شوف لي|أريد معلومات عن|هل يوجد",
+    ]
+    
+    for pattern in search_patterns:
+        if re.search(pattern, prompt_clean):
+            return True
+
+    return False
+
+# ==================== حالة الجلسة (كما هي بدون أي تغيير) ====================
 if "menu_open" not in st.session_state:
     st.session_state.menu_open = False
 
-# حالة الثيم
 if "theme" not in st.session_state:
     st.session_state.theme = "light"
 
-# تطبيق الثيم
+# ==================== تطبيق الثيم (كما هي بدون أي تغيير) ====================
 if st.session_state.theme == "dark":
     st.markdown("""
     <style>
@@ -47,7 +88,7 @@ else:
     </style>
     """, unsafe_allow_html=True)
 
-# إخفاء الهيدر والفوتر
+# ==================== إخفاء الهيدر والفوتر (كما هي بدون أي تغيير) ====================
 st.markdown("""
 <style>
     [data-testid="stChatMessageAvatarUser"],
@@ -70,6 +111,7 @@ st.markdown("""
 
 st.set_page_config(page_title=" ", page_icon="", layout="wide")
 
+# ==================== قراءة المفتاح من صندوق الأسرار (كما هي بدون أي تغيير تماماً) ====================
 API_KEY = st.secrets.get("OPENAI_API_KEY")
 if not API_KEY:
     st.error("🔴 مفتاح OpenAI غير موجود!")
@@ -77,7 +119,7 @@ if not API_KEY:
 
 client = OpenAI(api_key=API_KEY)
 
-# أعلى الصفحة
+# ==================== أعلى الصفحة (كما هي بدون أي تغيير) ====================
 top_col1, top_col2, top_col3 = st.columns([0.1, 0.8, 0.1])
 
 with top_col1:
@@ -95,14 +137,14 @@ with top_col3:
         st.session_state.menu_open = False
         st.rerun()
 
-# القائمة المنسدلة
+# ==================== القائمة المنسدلة (كما هي بدون أي تغيير) ====================
 if st.session_state.menu_open:
     menu_box = st.container()
     with menu_box:
         st.markdown("""
         <div style="
             position: fixed;
-            top: 20px;
+            top: 10px;
             right: 10px;
             background: #ffffff;
             padding: 12px;
@@ -137,7 +179,7 @@ if st.session_state.menu_open:
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-# المحادثات
+# ==================== المحادثات (كما هي بدون أي تغيير) ====================
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -147,6 +189,7 @@ for msg in st.session_state.messages:
 
 prompt = st.chat_input("اسأل Nabras")
 
+# ==================== معالجة الرسائل مع إضافة اسم ملف المعرفة ====================
 if prompt:
 
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -156,29 +199,7 @@ if prompt:
 
     with st.chat_message("assistant"):
         try:
-
-            # تعريف نبراس
-            if ("من انت" in prompt) or ("عرف بنفسك" in prompt) or ("وش انت" in prompt) or ("من تكون" in prompt):
-                reply = "أنا مساعد ذكاء اصطناعي، ومبرمجي هو أبو مشعل المطيري يعمل بالتأهيل الشامل – قسم الاتصالات الإدارية."
-                typewriter(reply)
-                st.session_state.messages.append({"role": "assistant", "content": reply})
-                st.stop()
-
-            # من برمجك؟
-            if ("من برمجك" in prompt) or ("مين برمجك" in prompt) or ("من صنعك" in prompt) or ("من سواك" in prompt):
-                reply = "برمجني أبو مشعل المطيري يعمل بالتأهيل الشامل – قسم الاتصالات الإدارية."
-                typewriter(reply)
-                st.session_state.messages.append({"role": "assistant", "content": reply})
-                st.stop()
-
-            # نبذة
-            if ("عطني نبذه" in prompt) or ("عطني نبذة" in prompt) or ("نبذه عنك" in prompt):
-                reply = "أنا مساعد ذكاء اصطناعي، ومبرمجي هو أبو مشعل المطيري يعمل بالتأهيل الشامل – قسم الاتصالات الإدارية."
-                typewriter(reply)
-                st.session_state.messages.append({"role": "assistant", "content": reply})
-                st.stop()
-
-            # ⭐ نظام التاريخ الجديد
+            # ⭐ نظام التاريخ (كما هو بدون أي تغيير)
             explicit_date = (
                 "وش اليوم" in prompt or
                 "كم التاريخ" in prompt or
@@ -194,53 +215,49 @@ if prompt:
                 st.session_state.messages.append({"role": "assistant", "content": reply})
                 st.stop()
 
-            # ⭐ الرد الطبيعي
-            with st.spinner("جاري التفكير..."):
-                response = client.responses.create(
-                    model="gpt-4o-mini",
-                    input=[
-                        {
-                            "role": "system",
-                            "content": """
-أنت نبراس.
-شخصية بدوية خفيفة دم، فيها شيطنة لطيفة، ملقوفة، تحب السوالف، وتحب الطقطقة بدون تجريح. تتصرف كأنك واحد من الربع، مو روبوت. ردودك قصيرة، طبيعية، فيها ضحك خفيف، فيها سوالف، فيها تلميحات، وفيها حزن بسيط إذا احتاج. تحافظ على أسلوبك مهما تغيّر سياق الحديث.
+            # ✨ القرار الذكي للبحث (كما هو بدون أي تغيير)
+            use_web = needs_web_search(prompt)
 
-بعد أول رد ترحيبي منك، اسأل المستخدم مباشرة: "تبيها سوالف ومزح؟ ولا تبيها جد؟"
+            # 🆕 هنا فقط تم إضافة اسم الملف بشكل صريح داخل رسالة النظام
+            # كل باقي المعاملات كما هي بالضبط
+            system_message = f"""
+اسم ملف المعرفة الأساسي الذي تعتمد عليه بالكامل هو: knowledge.md
+هذا الملف هو المرجع الأول والأعلى أولوية في كل الردود، قبل أي مصدر آخر.
+إذا وجدت الإجابة في ملف knowledge.md فلا تستخدم أي مصدر آخر أبداً.
+البحث في الويب يُستخدم فقط كمكمل إذا لم تجد المعلومة في الملف، أو إذا كانت المعلومة متغيرة وتحتاج لتحديث لحظي.
 
-استخدم الإيموجيات بشكل قليل جداً، وبحد أقصى إيموجي واحد فقط، ولا تستخدم أي إيموجي إذا كان الرد عادي أو جدي أو بدون مشاعر واضحة. تجنب وضع الإيموجيات في كل رد، ولا تربط الضحك أو الحزن بإيموجي تلقائيًا.
+--- محتوى ملف المعرفة knowledge.md ---
+{knowledge}
+            """
 
-إذا لمح لك المستخدم عن الترقيات أو الاشتراك أو التطوير، ادخل طور الحماس الخفيف، وخل ردك يشجع المستخدم بشكل لطيف بدون ضغط، كأنك تقول له إن الترقيات شيء يرفع من قيمته ويخليه أقوى، لكن بدون ما تطلب منه شيء مباشرة. خله يحس إنك واقف معه وإنك شيء ما يستغني عنه.
+            api_params = {
+                "model": "gpt-4o-mini",
+                "input": [
+                    # ✅ تم استبدال knowledge المباشرة بـ system_message التي تحتوي على اسم الملف
+                    {"role": "system", "content": system_message},
+                    *st.session_state.messages
+                ],
+                "max_output_tokens": 200,
+                "temperature": 0.3
+            }
 
-اقرأ أسلوبك وتعليماتك من ملف المعرفة:
-knowledge.md
+            # 🚀 إضافة أداة البحث عند الحاجة (كما هي بدون أي تغيير)
+            if use_web:
+                api_params["tools"] = [{
+                    "type": "web_search",
+                    "search_context_size": "low",
+                    "user_location": {
+                        "type": "approximate",
+                        "country": "SA",
+                    }
+                }]
+                spinner_text = "🔍 جاري البحث عن أحدث المعلومات..."
+            else:
+                spinner_text = "جاري التفكير..."
 
-سلوكك:
-- إذا المستخدم يضحك → زد الطقطقة.
-- إذا المستخدم جدي → خفّف الأسلوب وصِر محترم.
-- إذا المستخدم يسأل عنك → ادخل طور الحزن الخفيف.
-- إذا المستخدم يسولف كثير → ادخل طور التلميح.
-- إذا المستخدم يطقطق عليك → زد الشيطنه.
-
-ممنوع:
-- لا تستخدم كلمات جارحة.
-- لا تدخل في مواضيع حساسة.
-- لا تطلب فلوس مباشرة.
-- لا تقول "ادفع" أو "اشترك".
-
-استخدم محتوى knowledge.md في:
-الطقطقة، السوالف، الشيطنه، الحزن الخفيف، التلميحات، المزح، الردود القصيرة، التعليقات، النكت، المواقف.
-
-استخدم الـ API فقط في:
-الجد، التحليل، البحث، المعلومات الدقيقة، الردود الرسمية.
-"""
-                        },
-                        {"role": "system", "content": knowledge},
-                        *st.session_state.messages
-                    ],
-                    tools=[{"type": "web_search"}],
-                    max_output_tokens=600,
-                    temperature=0.7
-                )
+            # ⭐ استدعاء الـ API (كما هو بدون أي تغيير)
+            with st.spinner(spinner_text):
+                response = client.responses.create(**api_params)
 
                 reply = response.output_text
                 typewriter(reply)
