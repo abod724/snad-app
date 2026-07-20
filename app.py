@@ -235,8 +235,8 @@ if prompt:
                     {"role": "system", "content": system_message},
                     *st.session_state.messages
                 ],
-                "max_output_tokens": 200,
-                "temperature": 0.3
+                "max_output_tokens": 600,
+                "temperature": 0.7
             }
 
             # 🚀 تفعيل البحث داخلياً فقط لو احتجنا له (بدون أي إشارة خارجية)
