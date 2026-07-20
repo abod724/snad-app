@@ -102,7 +102,7 @@ if st.session_state.menu_open:
         st.markdown("""
         <div style="
             position: fixed;
-            top: 50px;
+            top: 20px;
             right: 10px;
             background: #ffffff;
             padding: 12px;
