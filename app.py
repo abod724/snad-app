@@ -121,3 +121,12 @@ if st.session_state.menu_open:
             st.code("https://nibras-app-pp5.streamlit.app/", language="text")
             st.success("انسخ الرابط وشاركه مع من تحب 🌟")
         st.markdown("</div>", unsafe_allow_html=True)
+# ==================== المحادثات ====================
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.write(msg["content"])
+
+prompt = st.chat_input("اسأل Nabras")
