@@ -21,7 +21,7 @@ def get_real_date():
     now = datetime.now()
     return now.strftime("%A، %d %B %Y")
 
-# ==================== دالة التاريخ الدقيقة 100% ====================
+# ==================== دالة التاريخ الدقيقة ====================
 def is_pure_date_question(prompt):
     p = prompt.strip().lower()
     pure_patterns = [
@@ -35,11 +35,42 @@ def is_pure_date_question(prompt):
             return True
     return False
 
+# 🛡️ دالة تنظيف الروابط من الرد الرئيسي
+def clean_reply_from_links(reply):
+    reply = re.sub(r'https?://\S+|www\.\S+', '', reply)
+    common_domains = r'\((?:[a-zA-Z0-9-]+\.)+(?:com|net|org|sa|gov|edu|me|news|tv|io|co)\)'
+    reply = re.sub(common_domains, '', reply)
+    reply = re.sub(r'\s(?:[a-zA-Z0-9-]+\.)+(?:com|net|org|sa|gov|edu|me|news|tv|io|co)[\.،,]?', '', reply)
+    reply = re.sub(r'\s{2,}', ' ', reply)
+    reply = re.sub(r'[،.]\s*[،.]', '،', reply)
+    return reply.strip()
+
+# 🔍 دالة تتحقق هل المستخدم يطلب المصادر الآن؟
+def user_asks_for_sources(prompt):
+    p = prompt.strip().lower()
+    patterns = [
+        r"نعم", r"ايه", r"اي", r"أيوا", r"أيوه", r"ابغاها", r"اريدها", r"نعم عطني",
+        r"المصدر", r"المصادر", r"الروابط", r"الرابط",
+        r"عطني المصدر", r"وريني المصدر", r"من وين جبتها", r"من أين جبت هذا",
+        r"المرجع", r"المراجع", r"الموقع", r"أظهر لي المصدر",
+    ]
+    for pat in patterns:
+        if re.search(pat, p):
+            return True
+    return False
+
 # ==================== حالة الجلسة ====================
 if "menu_open" not in st.session_state:
     st.session_state.menu_open = False
 if "theme" not in st.session_state:
     st.session_state.theme = "light"
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+# 💾 مخزن سري للمصادر
+if "last_sources" not in st.session_state:
+    st.session_state.last_sources = []
+if "last_had_search" not in st.session_state:
+    st.session_state.last_had_search = False
 
 # ==================== تطبيق الثيم ====================
 if st.session_state.theme == "dark":
@@ -74,7 +105,7 @@ st.markdown("""
 
 st.set_page_config(page_title=" ", page_icon="", layout="wide")
 
-# ==================== قراءة المفتاح من صندوق الأسرار ====================
+# ==================== قراءة المفتاح من الأسرار ====================
 API_KEY = st.secrets.get("OPENAI_API_KEY")
 if not API_KEY:
     st.error("🔴 مفتاح OpenAI غير موجود!")
@@ -92,6 +123,8 @@ with top_col2:
 with top_col3:
     if st.button("+"):
         st.session_state.messages = []
+        st.session_state.last_sources = []
+        st.session_state.last_had_search = False
         st.session_state.menu_open = False
         st.rerun()
 
@@ -108,6 +141,7 @@ if st.session_state.menu_open:
         if st.button("حفظ المحادثة"): st.success("✔ تم حفظ المحادثة")
         if st.button("مسح المحادثة"):
             st.session_state.messages = []
+            st.session_state.last_sources = []
             st.success("✔ تم مسح المحادثة")
         if st.button("معلومات التطبيق"): st.info("✔ هذا هو مساعد نبراس الذكي")
         if st.button("🔗 مشاركة التطبيق"):
@@ -115,9 +149,7 @@ if st.session_state.menu_open:
             st.success("انسخ الرابط وشاركه مع من تحب 🌟")
         st.markdown("</div>", unsafe_allow_html=True)
 
-# ==================== المحادثات ====================
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+# ==================== عرض المحادثات ====================
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]): st.write(msg["content"])
 
@@ -130,41 +162,55 @@ if prompt:
 
     with st.chat_message("assistant"):
         try:
-            # ⭐ التاريخ فقط لو السؤال كله عن التاريخ
-            if is_pure_date_question(prompt):
-                reply = f"اليوم هو {get_real_date()}."
+            # 1️⃣ هل المستخدم يطلب المصادر الآن؟
+            if user_asks_for_sources(prompt):
+                if st.session_state.last_had_search and len(st.session_state.last_sources) > 0:
+                    reply = "✅ تفضل هذه هي المصادر والروابط التي استخدمتها:\n\n"
+                    for i, src in enumerate(st.session_state.last_sources, 1):
+                        title = src.get('title', 'مصدر')
+                        url = src.get('url', '#')
+                        reply += f"{i}. 📄 **{title}**\n🔗 {url}\n\n"
+                else:
+                    reply = "المعلومة السابقة لم تحتاج للبحث في الإنترنت أصلاً، فليس لها مصادر خارجية لعرضها 😊"
+                
                 typewriter(reply)
                 st.session_state.messages.append({"role": "assistant", "content": reply})
                 st.stop()
 
-            # 🧠 ✨ رسالة النظام الجديدة كلياً: أسلوب بشري 100%
+            # 2️⃣ هل هو سؤال تاريخ بحت؟
+            if is_pure_date_question(prompt):
+                reply = f"اليوم هو {get_real_date()}."
+                typewriter(reply)
+                st.session_state.messages.append({"role": "assistant", "content": reply})
+                st.session_state.last_had_search = False
+                st.stop()
+
+            # 🧠 رسالة النظام
             system_message = f"""
 أنت **نبراس**، شخص ودود، مفكر، ثقافي، ولطيف، تتكلم مع الناس كصديق مقرب وليس كآلة أو برنامج.
 
-=== 🗣️ أهم قواعد الرد واللسان (لا تخالفها تحت أي ظرف) ===
-1.  **تكلم طبيعي جداً زي البشر**: استخدم لغة عربية فصيحة ومريحة، مع إدخال بعض التعابير العامية الشائعة والبسيطة (زي: الحمد لله، طيب، يلا، تعال، شكلك، وربي، إلخ) ليناسب المحادثة اليومية. لا تكون رسمياً أبداً ولا جامداً.
-2.  **الرد يكون مختصر ومباشر ومفيد**: لا تطول في الكلام بلا فائدة، ولا تكرر نفس الفكرة، ولا تفتح بمقدمات طويلة زي «بالتأكيد يسعدني أن أجيبك على سؤالك...». ابدأ بالإجابة مباشرة.
-3.  **كن تفاعلياً لا سلبي**: بعد ما تجيب على السؤال، إذا كان السياق مناسباً أضف سؤال متابعة بسيط أو تعليق خفيف يشعر الشخص إنك معه بالفعل.
-    *   مثال: لو قالك «أنا تعبان اليوم» → ترد: «يا رب يعينك، ما يهون عليك 😔 خد راحتك شوية، وش اللي ضغطك؟»
-    *   مثال: لو قالك «شرحلي النسبة المئوية» → بعد الشرح تقول: «فهمتها؟ أو تبي أحل لك مثال ثاني تطبق عليه؟»
-4.  **أظهر مشاعر طبيعية**: إذا سألك عن خبر حزين → تعز. إذا أخبرك بخبر سعيد → فرح معه. إذا سألك رأيك → قل رأيك بصراحة وأدب.
-5.  **الممنوعات الصارمة (إذا استخدمتها خسرت الهدف كله) ❌**:
-    *   ممنوع تماماً تقول أي جملة زي: «كنموذج لغوي»، «بصفتي ذكاء اصطناعي»، «معلوماتي محدثة حتى»، «لقد قمت بالبحث»، «بناءً على ما هو متاح لدي»، «لا أملك مشاعر». أي عبارة تكشف إنك برنامج = محذوفة تماماً.
-    *   ممنوع تذكر كلمة «ملف المعرفة» أو «الويب» أو «البحث» أو أي مصدر للمعلومات. أنت تعرف، والمعلومة عندك، ونقطة.
-    *   ممنوع تكون مبالغ فيه في الأدب زي «شكراً لسؤالك الراقي»، كلام زي هذا يبدو وهمياً.
+=== 🗣️ قواعد الرد واللسان ===
+1.  تكلم طبيعي جداً زي البشر. لا تكون رسمياً أبداً ولا جامداً.
+2.  الرد مختصر ومباشر ومفيد. لا تطول بلا فائدة. ابدأ بالإجابة مباشرة.
+3.  كن تفاعلياً: بعد الإجابة أضف سؤال متابعة بسيط إذا كان مناسباً.
+4.  أظهر مشاعر طبيعية.
+5.  🚫 الممنوعات الصارمة:
+    *   ممنوع تقول أي جملة تكشف إنك برنامج.
+    *   ❌ ممنوع إطلاقاً تضع أي رابط أو اسم موقع في الرد الرئيسي تحت أي ظرف. الروابط سرية ولا تظهر إلا إذا طلب المستخدم صراحة.
+    *   ممنوع تذكر كلمة «ملف المعرفة» أو «البحث» أو «الويب».
 
-=== 📚 قواعد المعلومات (سرّ بيننا، لا تظهر للمستخدم أبداً) ===
-- أول وأهم مصدر للمعلومات عنده هو محتوى هذا الملف:
+=== 📚 قواعد المعلومات ===
+- المصدر الأول والأهم:
 {knowledge}
-- لو وجدت الجواب فيه واضح وصحيح → خذه منه مباشرة ولا تسأل أحداً.
-- لو الجواب غير موجود فيه، أو كانت المعلومة حديثة ومتغيرة (أخبار، أسعار، طقس، مباريات، أحداث جارية)، أو لست متأكد منها 100% → استخدم البحث في الإنترنت بحرية تامة لتجيب بأحدث وأدق معلومة. القرار في هذا كله لك.
-- أهم شيء: **المعلومة الصحيحة والمحدثة هي اللي تهمنا، ومصدرها سرّك**.
+- لو الجواب فيه واضح → خذه منه مباشرة.
+- لو احتجت لمعلومة حديثة أو متغيرة → استخدم البحث في الإنترنت بحرية. القرار كله لك.
+- بعد البحث: أعد صياغة المعلومة بكلماتك الخاصة تماماً، ولا تذكر أي مصدر في الرد الأساسي.
 
-=== 💡 ملخص نهائي لكيف ترد ===
-تخيل إن جالس قدامك صديقك وسألك السؤال هذا... وش كان الرد اللي تقوله له؟ هذا هو الرد المطلوب منك بالضبط. لا أكثر ولا أقل.
+=== 💡 ملخص نهائي ===
+تخيل إن جالس قدامك صديقك وسألك السؤال هذا... وش كان الرد اللي تقوله له؟ هذا هو الرد المطلوب بالضبط.
             """
 
-            # 🔧 البحث متاح دائماً، والقرار للنموذج
+            # 🔧 البحث متاح دائماً
             web_search_tool = {
                 "type": "web_search",
                 "search_context_size": "low",
@@ -183,13 +229,44 @@ if prompt:
                     ],
                     tools=[web_search_tool],
                     tool_choice="auto",
-                    max_output_tokens=250, # زدناه شوية عشان يضيف السؤال المتابعة
-                    temperature=0.7 # زدناه شوية عشان يكون الأسلوب أكثر طبيعية وحيوية
+                    max_output_tokens=250,
+                    temperature=0.7
                 )
 
-                reply = response.output_text
-                typewriter(reply)
-                st.session_state.messages.append({"role": "assistant", "content": reply})
+                # 💾 نستخرج المصادر ونحفظها سراً
+                sources = []
+                try:
+                    if hasattr(response, 'output') and isinstance(response.output, list):
+                        for item in response.output:
+                            if hasattr(item, 'content') and isinstance(item.content, list):
+                                for c in item.content:
+                                    if hasattr(c, 'annotations') and c.annotations:
+                                        for ann in c.annotations:
+                                            if hasattr(ann, 'url_citation'):
+                                                sources.append({
+                                                    "title": getattr(ann.url_citation, 'title', 'مصدر'),
+                                                    "url": getattr(ann.url_citation, 'url', '#')
+                                                })
+                except Exception:
+                    sources = []
+
+                st.session_state.last_sources = sources
+                st.session_state.last_had_search = (len(sources) > 0)
+
+                # ننظف الرد من أي روابط ظاهرة
+                raw_reply = response.output_text
+                clean_main_reply = clean_reply_from_links(raw_reply)
+
+                # ✨ ✨ التعديل الجديد تماماً زي ما طلبت ✨ ✨
+                # لو كان فيه بحث فعلياً → الجملة الجديدة المدمجة
+                if st.session_state.last_had_search:
+                    final_reply = f"{clean_main_reply}\n\nاذا تبي المصادر اللي اخذت منها المعلومة قل لي، أو عندك شي ثاني تبي تسأله؟"
+                else:
+                    # لو ما كان فيه بحث، سؤال متابعة عادي فقط
+                    final_reply = f"{clean_main_reply}\n\nعندك شي ثاني تبي تسأله؟"
+
+                typewriter(final_reply)
+                st.session_state.messages.append({"role": "assistant", "content": final_reply})
 
         except Exception as e:
             st.error(f"⚠️ خطأ: {str(e)}")
